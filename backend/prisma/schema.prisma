@@ -1,15 +1,18 @@
+
 // DisasterReady – Gamified Disaster Preparedness and Emergency Response Training
 // Prisma Schema (Prisma ORM v7)
 
+// Prisma Client generator
 generator client {
   provider = "prisma-client-js"
 }
 
+// PostgreSQL database
 datasource db {
   provider = "postgresql"
 }
 
-// User role enumeration
+// User roles
 enum Role {
   USER
   TRAINER
@@ -46,21 +49,21 @@ enum AttemptStatus {
 
 // User Model: Represents trainees, trainers, and admins
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  username     String     @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
   passwordHash String
   fullName     String?
-  role         Role       @default(USER)
-  totalPoints  Int        @default(0)
-  level        Int        @default(1)
-  badges       String[]   @default([])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  role         Role     @default(USER)
+  totalPoints  Int      @default(0)
+  level        Int      @default(1)
+  badges       String[] @default([])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
-  attempts     Attempt[]
-  feedbacks    Feedback[]
+  attempts  Attempt[]
+  feedbacks Feedback[]
 
   @@map("users")
 }
@@ -72,16 +75,16 @@ model Scenario {
   description       String
   disasterType      DisasterType
   difficulty        Difficulty   @default(EASY)
-  estimatedDuration Int?         // Estimated time in minutes
+  estimatedDuration Int?
   passingScore      Int          @default(70)
   maxScore          Int          @default(100)
-  scenarioData      Json         // Branching nodes, hazards, decision options, correct actions
-  isPublished       Boolean      @default(true)
+  scenarioData      Json
+  isPublished       Boolean      @default(false)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
   // Relationships
-  attempts          Attempt[]
+  attempts Attempt[]
 
   @@map("scenarios")
 }
@@ -93,42 +96,42 @@ model Attempt {
   scenarioId  String
   score       Int           @default(0)
   status      AttemptStatus @default(IN_PROGRESS)
-  userChoices Json?         // Recorded decisions, timestamped choices, and branch outcomes
-  timeSpent   Int?          // Elapsed time in seconds
+  userChoices Json?
+  timeSpent   Int?
   startedAt   DateTime      @default(now())
   completedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   // Relationships
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scenario    Scenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  feedbacks   Feedback[]
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Restrict)
+
+  feedbacks Feedback[]
 
   @@index([userId])
   @@index([scenarioId])
   @@map("attempts")
 }
 
-// Feedback Model: AI-generated (Gemini) evaluation, recommendations, and reviews
+// Feedback Model: AI-generated evaluation and recommendations
 model Feedback {
   id                  String   @id @default(uuid())
-  attemptId           String
+  attemptId           String   @unique
   userId              String
   summary             String
-  evaluation          String   // Detailed AI assessment of emergency decisions made
+  evaluation          String
   strengths           String[] @default([])
   areasForImprovement String[] @default([])
-  aiRating            Int?     // 1 to 5 performance rating
+  aiRating            Int?
   suggestedTips       String[] @default([])
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   // Relationships
-  attempt             Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([attemptId])
   @@index([userId])
   @@map("feedbacks")
 }

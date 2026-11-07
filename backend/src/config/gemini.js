@@ -5,9 +5,6 @@ dotenv.config();
 
 let geminiClient = null;
 
-/**
- * Returns an instance of GoogleGenAI initialized with the configured API key.
- */
 export const getGeminiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -25,4 +22,3 @@ export const getGeminiClient = () => {
 };
 
 export default getGeminiClient;
-

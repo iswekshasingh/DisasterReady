@@ -1,27 +1,42 @@
+
 import { getGeminiClient } from '../config/gemini.js';
 
-/**
- * Service for interacting with Google Gemini API for disaster scenario evaluations
- */
-export const generateScenarioFeedback = async (scenarioTitle, disasterType, userActions) => {
+export const generateScenarioFeedback = async (
+  scenarioTitle,
+  disasterType,
+  evaluationResults
+) => {
   const ai = getGeminiClient();
 
   const prompt = `
-You are an expert emergency response and disaster preparedness trainer.
-Evaluate the following emergency response actions taken by a trainee during a ${disasterType} simulation: "${scenarioTitle}".
+You are a supportive disaster preparedness training coach.
 
-Trainee Actions:
-${JSON.stringify(userActions, null, 2)}
+Analyze the trainee's performance in this simulation:
+Scenario: ${scenarioTitle}
+Disaster type: ${disasterType}
 
-Provide a concise, constructive evaluation covering:
-1. Summary of performance
-2. Key strengths
-3. Critical mistakes or areas to improve
-4. Recommended survival tips
+The backend has already evaluated the answers.
+Use the evaluation results and explanations provided below:
+
+${JSON.stringify(evaluationResults, null, 2)}
+
+Provide feedback with these sections:
+
+1. Performance Summary
+2. What the trainee did well
+3. Mistakes and areas to improve
+4. Key safety lessons to remember
+
+IMPORTANT:
+- Do not change or recalculate the score.
+- Do not contradict the supplied answer evaluations.
+- Base safety guidance only on the supplied explanations.
+- Do not invent emergency instructions.
+- Keep the feedback concise, constructive and easy to understand.
 `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     contents: prompt,
   });
 
@@ -31,4 +46,3 @@ Provide a concise, constructive evaluation covering:
 export default {
   generateScenarioFeedback,
 };
-

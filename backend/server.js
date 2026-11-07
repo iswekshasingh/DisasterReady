@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import healthRoutes from './src/routes/health.routes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
+import authRoutes from './src/routes/auth.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +23,7 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 
 // 404 Handler for undefined routes
 app.use((req, res) => {

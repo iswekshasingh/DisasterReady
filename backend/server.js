@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import healthRoutes from './src/routes/health.routes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 import authRoutes from './src/routes/auth.routes.js';
+import scenarioRoutes from './src/routes/scenario.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +25,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/scenarios', scenarioRoutes);
 
 // 404 Handler for undefined routes
 app.use((req, res) => {

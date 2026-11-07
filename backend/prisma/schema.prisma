@@ -1,0 +1,134 @@
+// DisasterReady – Gamified Disaster Preparedness and Emergency Response Training
+// Prisma Schema (Prisma ORM v7)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User role enumeration
+enum Role {
+  USER
+  TRAINER
+  ADMIN
+}
+
+// Types of disaster training simulations
+enum DisasterType {
+  EARTHQUAKE
+  FLOOD
+  FIRE
+  TSUNAMI
+  CYCLONE
+  LANDSLIDE
+  CHEMICAL_SPILL
+  OTHER
+}
+
+// Simulation difficulty levels
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+// Status of a scenario attempt
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  ABANDONED
+}
+
+// User Model: Represents trainees, trainers, and admins
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  username     String     @unique
+  passwordHash String
+  fullName     String?
+  role         Role       @default(USER)
+  totalPoints  Int        @default(0)
+  level        Int        @default(1)
+  badges       String[]   @default([])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relationships
+  attempts     Attempt[]
+  feedbacks    Feedback[]
+
+  @@map("users")
+}
+
+// Scenario Model: Represents emergency response training simulations
+model Scenario {
+  id                String       @id @default(uuid())
+  title             String
+  description       String
+  disasterType      DisasterType
+  difficulty        Difficulty   @default(EASY)
+  estimatedDuration Int?         // Estimated time in minutes
+  passingScore      Int          @default(70)
+  maxScore          Int          @default(100)
+  scenarioData      Json         // Branching nodes, hazards, decision options, correct actions
+  isPublished       Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Relationships
+  attempts          Attempt[]
+
+  @@map("scenarios")
+}
+
+// Attempt Model: Tracks trainee simulation runs and decision history
+model Attempt {
+  id          String        @id @default(uuid())
+  userId      String
+  scenarioId  String
+  score       Int           @default(0)
+  status      AttemptStatus @default(IN_PROGRESS)
+  userChoices Json?         // Recorded decisions, timestamped choices, and branch outcomes
+  timeSpent   Int?          // Elapsed time in seconds
+  startedAt   DateTime      @default(now())
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relationships
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario    Scenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  feedbacks   Feedback[]
+
+  @@index([userId])
+  @@index([scenarioId])
+  @@map("attempts")
+}
+
+// Feedback Model: AI-generated (Gemini) evaluation, recommendations, and reviews
+model Feedback {
+  id                  String   @id @default(uuid())
+  attemptId           String
+  userId              String
+  summary             String
+  evaluation          String   // Detailed AI assessment of emergency decisions made
+  strengths           String[] @default([])
+  areasForImprovement String[] @default([])
+  aiRating            Int?     // 1 to 5 performance rating
+  suggestedTips       String[] @default([])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relationships
+  attempt             Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+  @@index([userId])
+  @@map("feedbacks")
+}

@@ -21,13 +21,36 @@ logs/
 Thumbs.db
 
 # Unity generated files
-Library/
-Temp/
-Obj/
-Build/
-Builds/
-Logs/
-UserSettings/
+.utmp/
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+ExportedObj/
+.consulo/
+.vs/
+.gradle/
 
 # IDE files
 .vscode/

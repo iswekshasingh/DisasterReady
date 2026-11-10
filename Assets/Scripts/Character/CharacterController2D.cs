@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using DisasterSurvival.Core;
 using DisasterSurvival.Views;
+using DisasterSurvival.Audio;
 
 namespace DisasterSurvival.Character
 {
@@ -13,7 +14,9 @@ namespace DisasterSurvival.Character
         Moving,
         Hiding,
         Safe,
-        Hurt
+        Hurt,
+        Crawling,
+        Coughing
     }
 
     /// <summary>
@@ -32,6 +35,8 @@ namespace DisasterSurvival.Character
         private Sprite _spriteHiding;
         private Sprite _spriteRun;
         private Sprite _spriteHurt;
+        private Sprite _spriteCrawl;
+        private Sprite _spriteCough;
 
         public CharacterState CurrentState => _currentState;
 
@@ -83,6 +88,20 @@ namespace DisasterSurvival.Character
                 new Color(0.95f, 0.35f, 0.25f, 1f),
                 "char_hurt"
             );
+
+            _spriteCrawl = SpriteHelper.LoadOrCreate(
+                GameLayoutManager.PathSpriteFireCharCrawl,
+                new Vector2(size.x * 1.5f, GameLayoutManager.CharacterCrawlingHeight),
+                new Color(0.2f, 0.55f, 0.8f, 1f),
+                "char_crawl"
+            );
+
+            _spriteCough = SpriteHelper.LoadOrCreate(
+                GameLayoutManager.PathSpriteFireCharCough,
+                size,
+                new Color(0.85f, 0.45f, 0.25f, 1f),
+                "char_cough"
+            );
         }
 
         public void ResetToStart()
@@ -119,28 +138,115 @@ namespace DisasterSurvival.Character
                 case CharacterState.Hurt:
                     _renderer.sprite = _spriteHurt;
                     break;
+                case CharacterState.Crawling:
+                    _renderer.sprite = _spriteCrawl != null ? _spriteCrawl : _spriteHiding;
+                    break;
+                case CharacterState.Coughing:
+                    _renderer.sprite = _spriteCough != null ? _spriteCough : _spriteHurt;
+                    break;
             }
 
-            // Adjust vertical position between standing and crouching so feet remain planted on floor
-            if (previousState == CharacterState.Hiding && _currentState != CharacterState.Hiding)
+            // Adjust vertical position dynamically between standing, hiding, and crawling so feet remain planted on whatever floor level the character is currently placed
+            float prevH = GetStateHeight(previousState);
+            float newH = GetStateHeight(_currentState);
+            if (Mathf.Abs(prevH - newH) > 0.01f)
             {
-                transform.position = new Vector3(transform.position.x, GameLayoutManager.CharacterStartPosition.y, transform.position.z);
-            }
-            else if (previousState != CharacterState.Hiding && _currentState == CharacterState.Hiding)
-            {
-                transform.position = new Vector3(transform.position.x, GameLayoutManager.CharacterHidePosition.y, transform.position.z);
+                float currentFeetY = transform.position.y - prevH * 0.5f;
+                float newCenterY = currentFeetY + newH * 0.5f;
+                transform.position = new Vector3(transform.position.x, newCenterY, transform.position.z);
             }
 
             UpdateScaleForCurrentState();
+        }
+
+        private float GetStateHeight(CharacterState state)
+        {
+            if (state == CharacterState.Hiding) return GameLayoutManager.CharacterHidingHeight;
+            if (state == CharacterState.Crawling) return GameLayoutManager.CharacterCrawlingHeight;
+            return GameLayoutManager.CharacterStandingHeight;
         }
 
         private void UpdateScaleForCurrentState()
         {
             if (_renderer == null || _renderer.sprite == null || _renderer.sprite.rect.height <= 0) return;
             float spriteH = _renderer.sprite.rect.height / _renderer.sprite.pixelsPerUnit;
-            float targetH = (_currentState == CharacterState.Hiding) ? GameLayoutManager.CharacterHidingHeight : GameLayoutManager.CharacterStandingHeight;
+            float targetH = GameLayoutManager.CharacterStandingHeight;
+            if (_currentState == CharacterState.Hiding)
+            {
+                targetH = GameLayoutManager.CharacterHidingHeight;
+            }
+            else if (_currentState == CharacterState.Crawling)
+            {
+                targetH = GameLayoutManager.CharacterCrawlingHeight;
+            }
             float scale = targetH / spriteH;
             transform.localScale = new Vector3(scale, scale, 1f);
+        }
+
+        public void SetSortingOrder(int order)
+        {
+            if (_renderer != null)
+            {
+                _renderer.sortingOrder = order;
+            }
+        }
+
+        public void MoveTo(Vector3 targetPos, float duration, Action onComplete = null)
+        {
+            StopIdleBob();
+            SetState(CharacterState.Moving);
+
+            if (_movementCoroutine != null)
+            {
+                StopCoroutine(_movementCoroutine);
+            }
+
+            Vector3 startPos = transform.position;
+            _movementCoroutine = StartCoroutine(MoveRoutine(startPos, targetPos, duration, () =>
+            {
+                SetState(CharacterState.Idle);
+                onComplete?.Invoke();
+            }));
+        }
+
+        public void CrawlTo(Vector3 targetPos, float duration, Action onComplete = null)
+        {
+            StopIdleBob();
+            SetState(CharacterState.Crawling);
+
+            if (_movementCoroutine != null)
+            {
+                StopCoroutine(_movementCoroutine);
+            }
+
+            Vector3 startPos = transform.position;
+            _movementCoroutine = StartCoroutine(MoveRoutine(startPos, targetPos, duration, () =>
+            {
+                onComplete?.Invoke();
+            }));
+        }
+
+        public void Cough(float duration, Action onComplete = null)
+        {
+            StopIdleBob();
+            InterruptMovement();
+            SetState(CharacterState.Coughing);
+            StartCoroutine(CoughRoutine(duration, onComplete));
+        }
+
+        private IEnumerator CoughRoutine(float duration, Action onComplete)
+        {
+            float elapsed = 0f;
+            Vector3 basePos = transform.position;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float shake = Mathf.Sin(elapsed * 25f) * 0.15f;
+                transform.position = new Vector3(basePos.x + shake, basePos.y, basePos.z);
+                yield return null;
+            }
+            transform.position = basePos;
+            onComplete?.Invoke();
         }
 
         public void WalkToTable(Action onComplete = null)
@@ -201,6 +307,12 @@ namespace DisasterSurvival.Character
             InterruptMovement();
             SetState(CharacterState.Hurt);
             StartCoroutine(HurtFlashRoutine());
+
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null)
+            {
+                audio.PlaySound(GameLayoutManager.PathAudioCharHurt);
+            }
         }
 
         private IEnumerator MoveRoutine(Vector3 start, Vector3 end, float duration, Action onFinished)

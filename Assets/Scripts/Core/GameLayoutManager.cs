@@ -264,6 +264,155 @@ namespace DisasterSurvival.Core
         public static readonly string PathAudioClick = "Audio/click";
         public static readonly string PathAudioSuccess = "Audio/success";
         public static readonly string PathAudioFail = "Audio/fail";
+        public static readonly string PathAudioCharHurt = "Audio/char_hurt";
+        #endregion
+
+        #region 5. Fire Simulation (Simulation 2)
+        [Header("Fire Simulation - Layout & World Coordinates")]
+        public static readonly Vector3 FireRoomBgPosition = new Vector3(0f, 0f, 0f);
+        public static readonly Vector3 FireCorridorBgPosition = new Vector3(0f, 0f, 0f);
+        public static readonly Vector3 FireRefugeBgPosition = new Vector3(0f, 0f, 0f);
+        public static readonly Vector2 FireRoomBgSize = new Vector2(60f, 33.75f);
+        public static readonly Vector2 FireCorridorBgSize = new Vector2(60f, 33.75f);
+        public static readonly Vector2 FireRefugeBgSize = new Vector2(60f, 33.75f);
+
+        // Fire door (leads from room to corridor) - Aligned to door in apartment room image
+        public static readonly Vector3 FireDoorPosition = new Vector3(21.56f, -1.45f, 0f);
+        public static readonly Vector2 FireDoorSize = new Vector2(4.1f, 11.4f);
+
+        // Character crawl dimensions and positions
+        // Hallway tiled floor is at Y = -6.5f. Standing height = 8.0f (center Y = -2.5f). Crawling height = 4.2f (center Y = -4.4f).
+        public static readonly float CharacterCrawlingHeight = 4.2f;
+        public static readonly Vector3 CharacterFireStartPos = new Vector3(-8f, -8.0f, 0f);
+        public static readonly Vector3 CharacterDoorCheckPos = new Vector3(17.5f, -8.0f, 0f);
+        public static readonly Vector3 CharacterCorridorStartPos = new Vector3(-20f, -2.5f, 0f);
+        public static readonly Vector3 CharacterCrawlStartPos = new Vector3(-20f, -4.4f, 0f);
+        public static readonly Vector3 CharacterCrawlMidPos = new Vector3(0f, -4.4f, 0f);
+        public static readonly Vector3 CharacterCrawlEndPos = new Vector3(22f, -4.4f, 0f);
+        public static readonly Vector3 CharacterExitStairsPos = new Vector3(18f, -2.5f, 0f);
+        public static readonly Vector3 CharacterElevatorPos = new Vector3(6f, -2.5f, 0f);
+        public static readonly Vector3 CharacterRetreatPos = new Vector3(-14f, -2.5f, 0f);
+
+        // Smoke Layer
+        public static readonly Vector3 SmokeLayerStartPosition = new Vector3(0f, 26f, 0f);
+        public static readonly Vector3 SmokeLayerDescendPosition = new Vector3(0f, 10f, 0f);
+        public static readonly Vector2 SmokeLayerSize = new Vector2(65f, 26f);
+        public static readonly float SmokeDescendDuration = 3.0f;
+        public static readonly float SmokeSafeLineY = -2.0f; // Head below this Y is safe
+        public static readonly Color SmokeColor = new Color(1f, 1f, 1f, 0.95f);
+
+        // Fire & Embers
+        public static readonly Vector3 FireFlameDoorPosition = new Vector3(21.56f, -2.0f, 0f);
+        public static readonly Vector2 FireFlameSize = new Vector2(4.5f, 7.0f);
+        public static readonly int FireEmberPoolSize = 25;
+        public static readonly Color FireEmberColor = new Color(1.0f, 0.45f, 0.05f, 0.95f);
+        public static readonly float FireFlickerInterval = 0.14f;
+
+        // Door Heat Check
+        public static readonly Vector3 HandIconStartPos = new Vector3(18.0f, -2.0f, 0f);
+        public static readonly Vector3 HandIconTargetPos = new Vector3(20.5f, -2.0f, 0f);
+        public static readonly Vector2 HandIconSize = new Vector2(2.5f, 2.5f);
+        public static readonly float HandMoveDuration = 0.85f;
+        public static readonly Color DoorHeatGlowColor = new Color(1f, 0.35f, 0.05f, 0.75f);
+
+        // Exit Route Props (Beat 3)
+        public static readonly Vector3 ExitSignPosition = new Vector3(18f, 3.5f, 0f);
+        public static readonly Vector2 ExitSignSize = new Vector2(6f, 3f);
+        public static readonly Vector3 StairsPosition = new Vector3(18f, -7.5f, 0f);
+        public static readonly Vector2 StairsSize = new Vector2(7f, 9f);
+        public static readonly Vector3 ElevatorPosition = new Vector3(6f, -7.5f, 0f);
+        public static readonly Vector2 ElevatorSize = new Vector2(6f, 9f);
+
+        // Sorting orders for Fire
+        public static readonly int SortingOrderFireBackground = 0;
+        public static readonly int SortingOrderFireDoor = 1;
+        public static readonly int SortingOrderFireRouteProps = 2;
+        public static readonly int SortingOrderFireCharacter = 5;
+        public static readonly int SortingOrderFireFlames = 8;
+        public static readonly int SortingOrderFireEmbers = 12;
+        public static readonly int SortingOrderFireSmoke = 15;
+        public static readonly int SortingOrderFireHandIcon = 25;
+
+        // Fire Simulation Resource Paths
+        public static readonly string PathSpriteFireRoomBg = "Sprites/Fire/fire_room_background";
+        public static readonly string PathSpriteFireCorridorBg = "Sprites/Fire/fire_corridor_background";
+        public static readonly string PathSpriteFireRefugeBg = "Sprites/Fire/fire_refuge_background";
+        public static readonly string PathSpriteFireCharIdle = "Sprites/Fire/character_idle";
+        public static readonly string PathSpriteFireCharCrawl = "Sprites/Fire/character_crawl";
+        public static readonly string PathSpriteFireCharCough = "Sprites/Fire/character_cough";
+        public static readonly string PathSpriteFireCharHurt = "Sprites/Fire/character_hurt";
+        public static readonly string PathSpriteFireDoorClosed = "Sprites/Fire/door_closed";
+        public static readonly string PathSpriteFireDoorOpen = "Sprites/Fire/door_open";
+        public static readonly string PathSpriteFireFlame1 = "Sprites/Fire/flame_1";
+        public static readonly string PathSpriteFireFlame2 = "Sprites/Fire/flame_2";
+        public static readonly string PathSpriteFireSmokeOverlay = "Sprites/Fire/smoke_overlay";
+        public static readonly string PathSpriteFireExitSign = "Sprites/Fire/exit_sign";
+        public static readonly string PathSpriteFireStairs = "Sprites/Fire/stairs";
+        public static readonly string PathSpriteFireElevatorDoor = "Sprites/Fire/elevator_door";
+        public static readonly string PathSpriteFireHandIcon = "Sprites/Fire/hand_icon";
+
+        public static readonly string PathAudioFireAlarm = "Audio/fire_alarm";
+        public static readonly string PathAudioFlameCrackle = "Audio/flame_crackle";
+        public static readonly string PathAudioCough = "Audio/cough";
+        public static readonly string PathAudioDoorOpen = "Audio/door_open";
+        public static readonly string PathAudioFireTruck = "Audio/fire_truck";
+
+        // Fire Simulation Questions & Strings
+        public static readonly string TextAlertFire = "FIRE ALARM: A fire has been detected in the building. Evacuate immediately!";
+        public static readonly string FR_Q1_Id = "FR_Q1";
+        public static readonly string FR_Q1_Prompt = "The fire alarm sounds and smoke seeps under the door! What will you do?";
+        public static readonly string FR_Q1_OptionA_Id = "A";
+        public static readonly string FR_Q1_OptionA_Label = "Open the door and run out";
+        public static readonly string FR_Q1_OptionB_Id = "B";
+        public static readonly string FR_Q1_OptionB_Label = "Check the door with the back of your hand first";
+        public static readonly string FR_Q1_Harm_Message = "Never open a door without checking it. A hot door means fire is right behind it.";
+        public static readonly string FR_Q1_Safe_Message = "Good thinking! Checking a door for heat first helps you avoid the fire.";
+
+        public static readonly string FR_Q2_Id = "FR_Q2";
+        public static readonly string FR_Q2_Prompt = "The corridor is filling with smoke that sinks lower every second! How do you move?";
+        public static readonly string FR_Q2_OptionA_Id = "A";
+        public static readonly string FR_Q2_OptionA_Label = "Stand up straight and run through quickly";
+        public static readonly string FR_Q2_OptionB_Id = "B";
+        public static readonly string FR_Q2_OptionB_Label = "Stay low and crawl under the smoke";
+        public static readonly string FR_Q2_Harm_Message = "Smoke rises. Breathing it in is the biggest danger in a fire.";
+        public static readonly string FR_Q2_Safe_Message = "Smart! The cleanest air is near the floor. Stay low and move.";
+
+        public static readonly string FR_Q3_Id = "FR_Q3";
+        public static readonly string FR_Q3_Prompt = "You have reached the fire refuge area on the balcony. What should you do next?";
+        public static readonly string FR_Q3_OptionA_Id = "A";
+        public static readonly string FR_Q3_OptionA_Label = "Take the elevator";
+        public static readonly string FR_Q3_OptionB_Id = "B";
+        public static readonly string FR_Q3_OptionB_Label = "Wait for rescue in the refuge area";
+        public static readonly string FR_Q3_OptionC_Id = "C";
+        public static readonly string FR_Q3_OptionC_Label = "Go back for your phone and belongings";
+        public static readonly string FR_Q3_Harm_Elevator_Message = "Never use elevators in a fire. Shafts act as chimneys for smoke and power failures trap you.";
+        public static readonly string FR_Q3_Safe_Refuge_Message = "Correct! Fire-rated refuge areas provide clean air, emergency communication, and direct access for firefighters to rescue you.";
+        public static readonly string FR_Q3_Harm_Belongings_Message = "Never re-enter a burning building for belongings. Flashovers and smoke inhalation happen in seconds.";
+
+        // Fire Educational Feedback
+        public static readonly string FireResultSubtitle = "FIRE & SMOKE EVACUATION ASSESSMENT";
+        public static readonly string FireSummaryAllSafe = "Outstanding fire safety response! You checked doors for heat, stayed low beneath toxic smoke, and waited for rescue in the designated refuge area.";
+        public static readonly string FireSummaryPartial = "You reached safety, but exposed yourself to hazardous fire risks. Review building fire evacuation guidelines.";
+        public static readonly string FireSummaryHazard = "Critical hazards encountered. Remember: check doors for heat, crawl under smoke, use refuge areas, and never turn back for belongings.";
+        public static readonly string FireKeyPrinciples = "• Check doors with the back of your hand before turning the handle.\n• Stay low and crawl under rising toxic smoke.\n• Wait for rescue in designated fire refuge areas with clean air.\n• Never use elevators or turn back for belongings.";
+
+        // General Multi-Simulation UI Strings
+        public static readonly string TextSimulationIndicatorFormat = "Simulation {0} of {1}";
+        public static readonly string TextButtonNextSimReady = "Next Simulation";
+        public static readonly string TextButtonBackToStart = "Back to Start";
+        #endregion
+
+        #region 6. Starter Screen UI
+        [Header("Starter Screen - Layout & Typography")]
+        public static readonly string TextStarterTitle = "DISASTER READY";
+        public static readonly string TextStarterSubtitle = "SELECT A SURVIVAL SIMULATION TO BEGIN TRAINING";
+        public static readonly Vector2 StarterCardSize = new Vector2(460f, 440f);
+        public static readonly float StarterCardSpacing = 50f;
+        public static readonly Color StarterBgColor = new Color(0.06f, 0.08f, 0.12f, 0.98f);
+        public static readonly Color StarterCardBgColor = new Color(0.11f, 0.14f, 0.20f, 0.98f);
+        public static readonly Color StarterCardBorderColor = new Color(0.20f, 0.26f, 0.36f, 1f);
+        public static readonly string TextLaunchSimulation = "START SIMULATION";
+        public static readonly string TextSelectSimulation = "Select Simulation";
         #endregion
 
         #region Unity Lifecycle

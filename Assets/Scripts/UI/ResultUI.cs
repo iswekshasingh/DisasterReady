@@ -5,12 +5,14 @@ using UnityEngine.UI;
 using DisasterSurvival.Core;
 using DisasterSurvival.Audio;
 using DisasterSurvival.Backend;
+using DisasterSurvival.Scenario;
 
 namespace DisasterSurvival.UI
 {
     /// <summary>
     /// Displays outcome results for both offline mode and backend-connected mode.
-    /// Handles scores, educational recaps, AI feedback, retry on failure, and leaderboard modal.
+    /// Handles scores, educational recaps, AI feedback, retry on failure, leaderboard modal,
+    /// and dynamic progression to the next simulation.
     /// </summary>
     public class ResultUI : MonoBehaviour
     {
@@ -23,12 +25,18 @@ namespace DisasterSurvival.UI
         private GameObject _backendButtonGroup;
         private Button _btnRetry;
 
+        private Button _btnNextSim;
+        private Text _btnNextSimText;
+        private Button _btnBackendNextSim;
+        private Text _btnBackendNextSimText;
+
         // Leaderboard sub-panel
         private GameObject _leaderboardPanel;
         private Text _leaderboardListText;
 
         private Image _dimBg;
         private Action _onReplayClicked;
+        private Action _onNextSimClicked;
         private Action _onRetryClicked;
         private Action _onOpenLeaderboard;
 
@@ -147,30 +155,57 @@ namespace DisasterSurvival.UI
                 _offlineButtonGroup,
                 "BtnReplay",
                 GameLayoutManager.TextButtonReplay,
-                new Vector2(340f, 75f),
+                new Vector2(250f, 75f),
                 new Color(0.18f, 0.45f, 0.75f, 1f),
                 Color.white,
-                26,
+                24,
                 () =>
                 {
+                    PlayClickSound();
                     gameObject.SetActive(false);
                     _onReplayClicked?.Invoke();
                 }
             );
-            btnReplay.GetComponent<RectTransform>().anchoredPosition = new Vector2(-200f, 0f);
+            btnReplay.GetComponent<RectTransform>().anchoredPosition = new Vector2(-290f, 0f);
 
-            Button btnNextSim = UIHelper.CreateStyledButton(
+            _btnNextSim = UIHelper.CreateStyledButton(
                 _offlineButtonGroup,
                 "BtnNextSim",
-                GameLayoutManager.TextButtonNextSim,
-                new Vector2(400f, 75f),
-                new Color(0.25f, 0.28f, 0.35f, 1f),
-                new Color(0.65f, 0.65f, 0.65f, 1f),
-                22,
-                null
+                GameLayoutManager.TextButtonNextSimReady,
+                new Vector2(300f, 75f),
+                new Color(0.18f, 0.65f, 0.45f, 1f),
+                Color.white,
+                20,
+                () =>
+                {
+                    PlayClickSound();
+                    gameObject.SetActive(false);
+                    _onNextSimClicked?.Invoke();
+                }
             );
-            btnNextSim.interactable = false; // Disabled with "Coming soon" label as requested
-            btnNextSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(200f, 0f);
+            _btnNextSimText = _btnNextSim.GetComponentInChildren<Text>();
+            _btnNextSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(20f, 0f);
+
+            Button btnSelectSim = UIHelper.CreateStyledButton(
+                _offlineButtonGroup,
+                "BtnSelectSim",
+                GameLayoutManager.TextSelectSimulation,
+                new Vector2(250f, 75f),
+                new Color(0.35f, 0.4f, 0.5f, 1f),
+                Color.white,
+                20,
+                () =>
+                {
+                    PlayClickSound();
+                    gameObject.SetActive(false);
+                    GameManager gm = GameLayoutManager.Get<GameManager>();
+                    if (gm != null)
+                    {
+                        gm.ReturnToStarterScreen();
+                    }
+                }
+            );
+            btnSelectSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(310f, 0f);
 
             // Backend Buttons
             _backendButtonGroup = new GameObject("BackendButtons");
@@ -186,29 +221,52 @@ namespace DisasterSurvival.UI
                 _backendButtonGroup,
                 "BtnPlayAgain",
                 GameLayoutManager.TextButtonPlayAgain,
-                new Vector2(300f, 75f),
+                new Vector2(260f, 75f),
                 new Color(0.18f, 0.45f, 0.75f, 1f),
                 Color.white,
-                26,
+                24,
                 () =>
                 {
+                    PlayClickSound();
                     gameObject.SetActive(false);
                     _onReplayClicked?.Invoke();
                 }
             );
-            btnPlayAgain.GetComponent<RectTransform>().anchoredPosition = new Vector2(-180f, 0f);
+            btnPlayAgain.GetComponent<RectTransform>().anchoredPosition = new Vector2(-280f, 0f);
+
+            _btnBackendNextSim = UIHelper.CreateStyledButton(
+                _backendButtonGroup,
+                "BtnBackendNextSim",
+                GameLayoutManager.TextButtonNextSimReady,
+                new Vector2(300f, 75f),
+                new Color(0.18f, 0.65f, 0.45f, 1f),
+                Color.white,
+                20,
+                () =>
+                {
+                    PlayClickSound();
+                    gameObject.SetActive(false);
+                    _onNextSimClicked?.Invoke();
+                }
+            );
+            _btnBackendNextSimText = _btnBackendNextSim.GetComponentInChildren<Text>();
+            _btnBackendNextSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(20f, 0f);
 
             Button btnLeaderboard = UIHelper.CreateStyledButton(
                 _backendButtonGroup,
                 "BtnLeaderboard",
                 GameLayoutManager.TextButtonLeaderboard,
-                new Vector2(320f, 75f),
+                new Vector2(260f, 75f),
                 new Color(0.2f, 0.6f, 0.4f, 1f),
                 Color.white,
-                24,
-                () => _onOpenLeaderboard?.Invoke()
+                22,
+                () =>
+                {
+                    PlayClickSound();
+                    _onOpenLeaderboard?.Invoke();
+                }
             );
-            btnLeaderboard.GetComponent<RectTransform>().anchoredPosition = new Vector2(180f, 0f);
+            btnLeaderboard.GetComponent<RectTransform>().anchoredPosition = new Vector2(300f, 0f);
 
             // Retry Button for network failures
             _btnRetry = UIHelper.CreateStyledButton(
@@ -337,42 +395,62 @@ namespace DisasterSurvival.UI
 
         public void ShowOfflineResults(int safeDecisions, int totalDecisions, Action onReplay)
         {
+            ShowOfflineResults(safeDecisions, totalDecisions, 0, null, onReplay, null);
+        }
+
+        public void ShowOfflineResults(int safeDecisions, int totalDecisions, int currentSimIndex, SimulationDefinition simDef, Action onReplay, Action onNextSim)
+        {
             if (_dimBg != null) _dimBg.raycastTarget = true;
             _onReplayClicked = onReplay;
+            _onNextSimClicked = onNextSim;
             _offlineButtonGroup.SetActive(true);
             _backendButtonGroup.SetActive(false);
             _btnRetry.gameObject.SetActive(false);
             _leaderboardPanel.SetActive(false);
 
             _titleText.text = GameLayoutManager.TextResultTitle;
-            _subtitleText.text = GameLayoutManager.TextResultSubtitleOffline;
+            _subtitleText.text = simDef != null ? simDef.DisplayTitle.ToUpperInvariant() : GameLayoutManager.TextResultSubtitleOffline;
             _scoreText.text = $"{safeDecisions} / {totalDecisions} Safe Decisions";
 
-            if (safeDecisions == totalDecisions)
+            // Configure Next Simulation button
+            ConfigureNextSimButton(_btnNextSim, _btnNextSimText, currentSimIndex, onNextSim);
+
+            // Educational feedback
+            if (simDef != null)
             {
-                _scoreText.color = new Color(0.2f, 0.95f, 0.45f, 1f);
-                _summaryText.text = GameLayoutManager.TextSummaryAllSafe + "\n\n" +
-                    "Key Earthquake Principles Learned:\n" +
-                    "• DROP down onto your hands and knees immediately.\n" +
-                    "• COVER your head and neck under a sturdy table.\n" +
-                    "• HOLD ON until the shaking stops.\n" +
-                    "• Use stairs to evacuate; never use elevators.";
-            }
-            else if (safeDecisions > 0)
-            {
-                _scoreText.color = new Color(1f, 0.8f, 0.2f, 1f);
-                _summaryText.text = GameLayoutManager.TextSummaryPartial + "\n\n" +
-                    "Important Points to Remember:\n" +
-                    "• Running outside during shaking carries the highest risk of injury from falling exterior brick, glass, and cornice pieces.\n" +
-                    "• Wait in your safe shelter until after the main tremor finishes.";
+                if (safeDecisions == totalDecisions)
+                {
+                    _scoreText.color = new Color(0.2f, 0.95f, 0.45f, 1f);
+                    _summaryText.text = $"{simDef.EducationalSummaryAllSafe}\n\nKey Principles Learned:\n{simDef.KeyPrinciplesText}";
+                }
+                else if (safeDecisions > 0)
+                {
+                    _scoreText.color = new Color(1f, 0.8f, 0.2f, 1f);
+                    _summaryText.text = $"{simDef.EducationalSummaryPartial}\n\nImportant Points to Remember:\n{simDef.KeyPrinciplesText}";
+                }
+                else
+                {
+                    _scoreText.color = new Color(0.95f, 0.3f, 0.25f, 1f);
+                    _summaryText.text = $"{simDef.EducationalSummaryHazard}\n\nCritical Takeaways:\n{simDef.KeyPrinciplesText}";
+                }
             }
             else
             {
-                _scoreText.color = new Color(0.95f, 0.3f, 0.25f, 1f);
-                _summaryText.text = GameLayoutManager.TextSummaryHazard + "\n\n" +
-                    "Immediate Action Plan:\n" +
-                    "• Always remember: Drop, Cover, and Hold On.\n" +
-                    "• Avoid doorways and windows.";
+                if (safeDecisions == totalDecisions)
+                {
+                    _scoreText.color = new Color(0.2f, 0.95f, 0.45f, 1f);
+                    _summaryText.text = GameLayoutManager.TextSummaryAllSafe;
+                }
+                else if (safeDecisions > 0)
+                {
+                    _scoreText.color = new Color(1f, 0.8f, 0.2f, 1f);
+                    _summaryText.text = GameLayoutManager.TextSummaryPartial;
+                }
+                else
+                {
+                    _scoreText.color = new Color(0.95f, 0.3f, 0.25f, 1f);
+                    _summaryText.text = GameLayoutManager.TextSummaryHazard;
+                }
             }
 
             gameObject.SetActive(true);
@@ -386,8 +464,14 @@ namespace DisasterSurvival.UI
 
         public void ShowBackendResults(AttemptResultResponse response, Action onPlayAgain, Action onOpenLeaderboard)
         {
+            ShowBackendResults(response, 0, null, onPlayAgain, null, onOpenLeaderboard);
+        }
+
+        public void ShowBackendResults(AttemptResultResponse response, int currentSimIndex, SimulationDefinition simDef, Action onPlayAgain, Action onNextSim, Action onOpenLeaderboard)
+        {
             if (_dimBg != null) _dimBg.raycastTarget = true;
             _onReplayClicked = onPlayAgain;
+            _onNextSimClicked = onNextSim;
             _onOpenLeaderboard = onOpenLeaderboard;
             _offlineButtonGroup.SetActive(false);
             _backendButtonGroup.SetActive(true);
@@ -404,6 +488,9 @@ namespace DisasterSurvival.UI
             _scoreText.text = $"Score: {score}%   (+{points} Points)";
             _scoreText.color = passed ? new Color(0.2f, 0.95f, 0.45f, 1f) : new Color(1f, 0.75f, 0.2f, 1f);
 
+            // Configure Next Simulation button in backend mode
+            ConfigureNextSimButton(_btnBackendNextSim, _btnBackendNextSimText, currentSimIndex, onNextSim);
+
             string feedback = (response != null && !string.IsNullOrEmpty(response.aiFeedback))
                 ? response.aiFeedback
                 : "Your disaster mitigation decisions have been recorded and scored.";
@@ -415,6 +502,27 @@ namespace DisasterSurvival.UI
             if (audio != null)
             {
                 audio.PlaySound(passed ? GameLayoutManager.PathAudioSuccess : GameLayoutManager.PathAudioFail);
+            }
+        }
+
+        private void ConfigureNextSimButton(Button button, Text label, int currentSimIndex, Action onNextSim)
+        {
+            if (button == null) return;
+
+            bool hasNext = SimulationRegistry.HasNext(currentSimIndex);
+            button.interactable = (onNextSim != null);
+
+            if (label != null)
+            {
+                if (hasNext)
+                {
+                    SimulationDefinition nextDef = SimulationRegistry.GetSimulation(currentSimIndex + 1);
+                    label.text = $"Next: {nextDef.DisplayTitle}";
+                }
+                else
+                {
+                    label.text = GameLayoutManager.TextButtonBackToStart;
+                }
             }
         }
 
@@ -460,6 +568,15 @@ namespace DisasterSurvival.UI
             }
 
             _leaderboardListText.text = sb.ToString();
+        }
+
+        private void PlayClickSound()
+        {
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null)
+            {
+                audio.PlaySound(GameLayoutManager.PathAudioClick);
+            }
         }
     }
 }

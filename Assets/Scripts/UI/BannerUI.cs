@@ -151,5 +151,11 @@ namespace DisasterSurvival.UI
             }
             _dialogueText.text = "";
         }
+
+        public void Hide()
+        {
+            Clear();
+            gameObject.SetActive(false);
+        }
     }
 }

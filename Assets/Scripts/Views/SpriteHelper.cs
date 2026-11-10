@@ -150,6 +150,7 @@ namespace DisasterSurvival.Views
                         case "char_hiding":
                         case "char_run":
                         case "char_hurt":
+                        case "char_cough":
                             // Pixel humanoid figure
                             int headBottom = height * 2 / 3;
                             int headTop = height - 2;
@@ -167,6 +168,20 @@ namespace DisasterSurvival.Views
                                 bool inCrouch = y <= height / 2 && x >= 2 && x <= width - 2;
                                 pixels[idx] = inCrouch ? (isBorder ? borderColor : baseColor) : Color.clear;
                             }
+                            else if (type == "char_cough")
+                            {
+                                // Coughing: bent forward slightly with hand to face
+                                bool inCoughHead = y >= headBottom - 4 && y <= headTop - 4 && x >= torsoLeft + 4 && x <= torsoRight + 4;
+                                bool inCoughTorso = y >= torsoBottom && y < headBottom - 4 && x >= torsoLeft + 2 && x <= torsoRight + 2;
+                                if (inCoughHead || inCoughTorso || inLegs)
+                                {
+                                    pixels[idx] = isBorder ? borderColor : baseColor;
+                                }
+                                else
+                                {
+                                    pixels[idx] = Color.clear;
+                                }
+                            }
                             else if (inHead || inTorso || inLegs)
                             {
                                 if (inHead && y == headTop - 4 && (x == torsoLeft + 3 || x == torsoRight - 3))
@@ -177,6 +192,152 @@ namespace DisasterSurvival.Views
                                 {
                                     pixels[idx] = isBorder ? borderColor : baseColor;
                                 }
+                            }
+                            else
+                            {
+                                pixels[idx] = Color.clear;
+                            }
+                            break;
+
+                        case "char_crawl":
+                            // Low crawl pose on hands and knees
+                            bool inCrawlBody = y >= 2 && y <= height - 4 && x >= 4 && x <= width - 4;
+                            if (inCrawlBody)
+                            {
+                                bool isCrawlHead = x >= width - 12 && y >= height / 2;
+                                pixels[idx] = isCrawlHead ? Color.Lerp(baseColor, Color.white, 0.2f) : (isBorder ? borderColor : baseColor);
+                            }
+                            else
+                            {
+                                pixels[idx] = Color.clear;
+                            }
+                            break;
+
+                        case "door_closed":
+                            bool isClosedDoorFrame = x < 4 || x >= width - 4 || y >= height - 4;
+                            bool isClosedKnob = (x >= width - 10 && x <= width - 6 && y >= height / 2 - 2 && y <= height / 2 + 2);
+                            if (isClosedKnob)
+                            {
+                                pixels[idx] = new Color(1f, 0.85f, 0.2f, 1f);
+                            }
+                            else if (isClosedDoorFrame)
+                            {
+                                pixels[idx] = borderColor;
+                            }
+                            else
+                            {
+                                pixels[idx] = baseColor;
+                            }
+                            break;
+
+                        case "door_open":
+                            bool isOpenFrame = x < 4 || x >= width - 4 || y >= height - 4;
+                            if (isOpenFrame)
+                            {
+                                pixels[idx] = borderColor;
+                            }
+                            else
+                            {
+                                // Open portal: dark smoky interior with warm glow
+                                float warm = (float)y / height;
+                                pixels[idx] = Color.Lerp(new Color(0.1f, 0.05f, 0.05f, 1f), new Color(0.4f, 0.15f, 0.05f, 1f), warm);
+                            }
+                            break;
+
+                        case "flame_1":
+                        case "flame_2":
+                            // Teardrop / jagged flame shape
+                            int flameCenter = width / 2;
+                            int distFlameX = Mathf.Abs(x - flameCenter);
+                            int maxFlameW = (type == "flame_1") ? (height - y) / 2 + 2 : (height - y) / 2 + 4;
+                            if (distFlameX < maxFlameW && y < height - 3)
+                            {
+                                float coreDist = (float)distFlameX / Mathf.Max(1, maxFlameW);
+                                if (coreDist < 0.35f && y < height * 0.7f)
+                                {
+                                    pixels[idx] = new Color(1f, 0.95f, 0.4f, 1f); // Hot yellow core
+                                }
+                                else if (coreDist < 0.75f)
+                                {
+                                    pixels[idx] = new Color(1f, 0.5f, 0.1f, 1f); // Orange mid-flame
+                                }
+                                else
+                                {
+                                    pixels[idx] = new Color(0.9f, 0.2f, 0.05f, 0.9f); // Dark red flame tips
+                                }
+                            }
+                            else
+                            {
+                                pixels[idx] = Color.clear;
+                            }
+                            break;
+
+                        case "smoke_overlay":
+                            // Descending smoke gradient
+                            float smokeRatio = (float)y / height; // 1 at top, 0 at bottom
+                            float smokeA = Mathf.Clamp01(Mathf.Pow(smokeRatio, 0.6f) * baseColor.a);
+                            bool smokeBillow = ((x * 11 + y * 17) % 7 == 0);
+                            Color smCol = baseColor;
+                            smCol.a = smokeBillow ? smokeA * 0.9f : smokeA;
+                            pixels[idx] = smCol;
+                            break;
+
+                        case "exit_sign":
+                            // Green glowing exit sign with border
+                            bool isSignBorder = x < 3 || x >= width - 3 || y < 3 || y >= height - 3;
+                            if (isSignBorder)
+                            {
+                                pixels[idx] = new Color(0.1f, 0.4f, 0.15f, 1f);
+                            }
+                            else
+                            {
+                                bool isTextPixels = (x >= width / 4 && x <= width * 3 / 4 && y >= height / 3 && y <= height * 2 / 3);
+                                pixels[idx] = isTextPixels ? Color.white : new Color(0.15f, 0.85f, 0.35f, 1f);
+                            }
+                            break;
+
+                        case "stairs":
+                            // Stepped stair pattern
+                            int stepIndex = (x * 5) / width;
+                            int stepTop = ((stepIndex + 1) * height) / 5;
+                            if (y <= stepTop)
+                            {
+                                bool isStepEdge = (y == stepTop || (x * 5) % width == 0);
+                                pixels[idx] = isStepEdge ? highlightColor : (isBorder ? borderColor : baseColor);
+                            }
+                            else
+                            {
+                                pixels[idx] = Color.clear;
+                            }
+                            break;
+
+                        case "elevator_door":
+                            // Metallic doors with middle divider
+                            bool isElevBorder = x < 4 || x >= width - 4 || y < 4 || y >= height - 4;
+                            bool isMidSplit = (x >= width / 2 - 1 && x <= width / 2 + 1);
+                            bool isCallPanel = (x >= width - 12 && x <= width - 8 && y >= height / 2 - 4 && y <= height / 2 + 8);
+                            if (isElevBorder || isMidSplit)
+                            {
+                                pixels[idx] = borderColor;
+                            }
+                            else if (isCallPanel)
+                            {
+                                pixels[idx] = new Color(0.95f, 0.25f, 0.2f, 1f); // Warning / red prohibited indicator
+                            }
+                            else
+                            {
+                                pixels[idx] = baseColor;
+                            }
+                            break;
+
+                        case "hand_icon":
+                            // Hand silhouette
+                            int handCenterX = width / 2;
+                            int handCenterY = height / 2;
+                            int dHand = Mathf.Abs(x - handCenterX) + Mathf.Abs(y - handCenterY);
+                            if (dHand < width / 2)
+                            {
+                                pixels[idx] = isBorder ? borderColor : baseColor;
                             }
                             else
                             {

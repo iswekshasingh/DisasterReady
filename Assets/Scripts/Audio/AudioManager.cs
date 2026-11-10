@@ -18,10 +18,12 @@ namespace DisasterSurvival.Audio
         {
             _sfxSource = gameObject.AddComponent<AudioSource>();
             _sfxSource.playOnAwake = false;
+            _sfxSource.volume = 1.0f;
 
             _loopSource = gameObject.AddComponent<AudioSource>();
             _loopSource.playOnAwake = false;
             _loopSource.loop = true;
+            _loopSource.volume = 0.75f;
 
             GameLayoutManager.Register(this);
         }
@@ -59,6 +61,10 @@ namespace DisasterSurvival.Audio
             AudioClip clip = GetOrLoadClip(resourcePath);
             if (clip != null && _loopSource != null)
             {
+                if (_loopSource.isPlaying && _loopSource.clip == clip)
+                {
+                    return;
+                }
                 _loopSource.clip = clip;
                 _loopSource.Play();
             }

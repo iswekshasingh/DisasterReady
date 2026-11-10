@@ -126,39 +126,11 @@ namespace DisasterSurvival.Core
         {
             GameObject worldRoot = new GameObject("[World]");
 
-            // Background
-            GameObject bgObj = new GameObject("BackgroundView");
-            bgObj.transform.SetParent(worldRoot.transform);
-            bgObj.AddComponent<SpriteRenderer>();
-            bgObj.AddComponent<BackgroundView>();
-
-            // Door
-            GameObject doorObj = new GameObject("DoorView");
-            doorObj.transform.SetParent(worldRoot.transform);
-            doorObj.AddComponent<SpriteRenderer>();
-            doorObj.AddComponent<DoorView>();
-
-            // Table
-            GameObject tableObj = new GameObject("TableView");
-            tableObj.transform.SetParent(worldRoot.transform);
-            tableObj.AddComponent<SpriteRenderer>();
-            tableObj.AddComponent<TableView>();
-
-            // Character
+            // Persistent player character across all simulations
             GameObject charObj = new GameObject("Character");
             charObj.transform.SetParent(worldRoot.transform);
             charObj.AddComponent<SpriteRenderer>();
             charObj.AddComponent<CharacterController2D>();
-
-            // Ceiling Debris Controller
-            GameObject debrisObj = new GameObject("DebrisController");
-            debrisObj.transform.SetParent(worldRoot.transform);
-            debrisObj.AddComponent<DebrisController>();
-
-            // Dust Effect Pool
-            GameObject dustObj = new GameObject("DustEffect");
-            dustObj.transform.SetParent(worldRoot.transform);
-            dustObj.AddComponent<DustEffect>();
         }
 
         private static void SetupCanvas()
@@ -183,27 +155,37 @@ namespace DisasterSurvival.Core
             alertBorderObj.transform.SetParent(canvasObj.transform, false);
             alertBorderObj.AddComponent<AlertBorderUI>();
 
-            // 2. Banner UI (bottom banner)
+            // 2. Simulation Indicator UI (header counter: "Simulation X of Y")
+            GameObject indicatorObj = new GameObject("SimulationIndicatorUI");
+            indicatorObj.transform.SetParent(canvasObj.transform, false);
+            indicatorObj.AddComponent<SimulationIndicatorUI>();
+
+            // 3. Banner UI (bottom banner)
             GameObject bannerObj = new GameObject("BannerUI");
             bannerObj.transform.SetParent(canvasObj.transform, false);
             bannerObj.AddComponent<BannerUI>();
 
-            // 3. Decision UI (choice buttons above banner)
+            // 4. Decision UI (choice buttons above banner)
             GameObject decisionObj = new GameObject("DecisionUI");
             decisionObj.transform.SetParent(canvasObj.transform, false);
             decisionObj.AddComponent<DecisionUI>();
 
-            // 4. Result UI (fullscreen modal)
+            // 5. Result UI (fullscreen modal)
             GameObject resultObj = new GameObject("ResultUI");
             resultObj.transform.SetParent(canvasObj.transform, false);
             resultObj.AddComponent<ResultUI>();
 
-            // 5. Loading Spinner UI (fullscreen modal)
+            // 6. Starter Screen UI (simulation selection before starting)
+            GameObject starterObj = new GameObject("StarterScreenUI");
+            starterObj.transform.SetParent(canvasObj.transform, false);
+            starterObj.AddComponent<StarterScreenUI>();
+
+            // 7. Loading Spinner UI (fullscreen modal)
             GameObject spinnerObj = new GameObject("LoadingSpinnerUI");
             spinnerObj.transform.SetParent(canvasObj.transform, false);
             spinnerObj.AddComponent<LoadingSpinnerUI>();
 
-            // 6. Auth UI (fullscreen modal, on top of everything)
+            // 8. Auth UI (fullscreen modal, on top of everything)
             GameObject authObj = new GameObject("AuthUI");
             authObj.transform.SetParent(canvasObj.transform, false);
             authObj.AddComponent<AuthUI>();

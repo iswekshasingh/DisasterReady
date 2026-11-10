@@ -10,6 +10,7 @@ namespace DisasterSurvival.Core
     public enum GameState
     {
         Login,
+        StarterScreen,
         Menu,
         Simulation,
         Submitting,
@@ -58,7 +59,7 @@ namespace DisasterSurvival.Core
                 AuthManager auth = GameLayoutManager.Get<AuthManager>();
                 if (auth != null && auth.IsAuthenticated)
                 {
-                    TransitionToState(GameState.Menu);
+                    TransitionToState(GameState.StarterScreen);
                 }
                 else
                 {
@@ -67,8 +68,8 @@ namespace DisasterSurvival.Core
             }
             else
             {
-                // In offline mode, immediately start the Earthquake simulation
-                TransitionToState(GameState.Simulation);
+                // In offline mode, present the Starter Screen before starting any simulation
+                TransitionToState(GameState.StarterScreen);
             }
         }
 
@@ -81,6 +82,9 @@ namespace DisasterSurvival.Core
             {
                 case GameState.Login:
                     ShowLogin();
+                    break;
+                case GameState.StarterScreen:
+                    ShowStarterScreen();
                     break;
                 case GameState.Menu:
                     FetchAndStartBackendScenario();
@@ -97,15 +101,48 @@ namespace DisasterSurvival.Core
             if (authUI != null)
             {
                 authUI.Show(
-                    onAuthSuccess: () => TransitionToState(GameState.Menu),
+                    onAuthSuccess: () => TransitionToState(GameState.StarterScreen),
                     onPlayOffline: () =>
                     {
                         GameLayoutManager.useBackend = false;
                         authUI.Hide();
-                        TransitionToState(GameState.Simulation);
+                        TransitionToState(GameState.StarterScreen);
                     }
                 );
             }
+        }
+
+        public void ShowStarterScreen()
+        {
+            StarterScreenUI starter = GameLayoutManager.Get<StarterScreenUI>();
+            if (starter != null)
+            {
+                starter.Show((simIndex) =>
+                {
+                    starter.Hide();
+                    _currentState = GameState.Simulation;
+                    ScenarioRunner runner = GameLayoutManager.Get<ScenarioRunner>();
+                    if (runner != null)
+                    {
+                        runner.StartOfflineSimulation(simIndex);
+                    }
+                });
+            }
+            else
+            {
+                TransitionToState(GameState.Simulation);
+            }
+        }
+
+        public void ReturnToStarterScreen()
+        {
+            ScenarioRunner runner = GameLayoutManager.Get<ScenarioRunner>();
+            if (runner != null)
+            {
+                runner.StopAllCoroutines();
+            }
+
+            TransitionToState(GameState.StarterScreen);
         }
 
         private void FetchAndStartBackendScenario()

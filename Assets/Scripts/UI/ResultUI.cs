@@ -484,16 +484,16 @@ namespace DisasterSurvival.UI
             _subtitleText.color = passed ? new Color(0.3f, 0.9f, 0.4f, 1f) : new Color(0.95f, 0.4f, 0.3f, 1f);
 
             int score = response != null ? response.score : 0;
-            int points = response != null ? response.points : 0;
-            _scoreText.text = $"Score: {score}%   (+{points} Points)";
+            int maxScore = response != null ? response.maxScore : 100;
+            _scoreText.text = $"Score: {score} / {maxScore}";
             _scoreText.color = passed ? new Color(0.2f, 0.95f, 0.45f, 1f) : new Color(1f, 0.75f, 0.2f, 1f);
 
             // Configure Next Simulation button in backend mode
             ConfigureNextSimButton(_btnBackendNextSim, _btnBackendNextSimText, currentSimIndex, onNextSim);
 
-            string feedback = (response != null && !string.IsNullOrEmpty(response.aiFeedback))
-                ? response.aiFeedback
-                : "Your disaster mitigation decisions have been recorded and scored.";
+            string feedback = (response != null && !string.IsNullOrEmpty(response.feedback))
+            ? response.feedback
+            : "Your disaster mitigation decisions have been recorded and scored.";
             _summaryText.text = "AI FEEDBACK:\n\n" + feedback;
 
             gameObject.SetActive(true);
@@ -553,18 +553,17 @@ namespace DisasterSurvival.UI
             }
 
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendLine("RANK      AGENT                  SCORE      POINTS");
-            sb.AppendLine("--------------------------------------------------");
+            sb.AppendLine("RANK      AGENT                  TOTAL POINTS");
+            sb.AppendLine("---------------------------------------------");
 
             for (int i = 0; i < entries.Count; i++)
             {
                 LeaderboardEntry entry = entries[i];
                 string rank = (i + 1).ToString().PadRight(8);
                 string username = (entry.username ?? "Anonymous").PadRight(20);
-                string score = $"{entry.score}%".PadRight(10);
-                string pts = $"{entry.points} pts";
+                string pts = $"{entry.totalPoints} pts";
 
-                sb.AppendLine($"{rank}  {username}  {score}  {pts}");
+                sb.AppendLine($"{rank}  {username}  {pts}");
             }
 
             _leaderboardListText.text = sb.ToString();

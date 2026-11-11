@@ -105,15 +105,24 @@ namespace DisasterSurvival.Character
         }
 
         public void ResetToStart()
-        {
-            StopAllCoroutines();
-            _movementCoroutine = null;
-            _idleBobCoroutine = null;
-            if (_renderer != null) _renderer.color = Color.white;
-            transform.position = GameLayoutManager.CharacterStartPosition;
-            SetState(CharacterState.Idle);
-            StartIdleBob();
-        }
+{
+    StopAllCoroutines();
+
+    _movementCoroutine = null;
+    _idleBobCoroutine = null;
+
+    if (_renderer != null)
+        _renderer.color = Color.white;
+
+    transform.position = GameLayoutManager.CharacterStartPosition;
+
+    SetState(CharacterState.Idle);
+
+    if (gameObject.activeInHierarchy)
+    {
+        StartIdleBob();
+    }
+}
 
         public void SetState(CharacterState newState)
         {
@@ -250,48 +259,77 @@ namespace DisasterSurvival.Character
         }
 
         public void WalkToTable(Action onComplete = null)
+{
+    if (!gameObject.activeInHierarchy)
+        gameObject.SetActive(true);
+
+    StopIdleBob();
+    SetState(CharacterState.Moving);
+
+    if (_movementCoroutine != null)
+    {
+        StopCoroutine(_movementCoroutine);
+        _movementCoroutine = null;
+    }
+
+    Vector3 startPos = new Vector3(
+        transform.position.x,
+        GameLayoutManager.CharacterStartPosition.y,
+        transform.position.z
+    );
+
+    transform.position = startPos;
+
+    Vector3 walkTargetPos = new Vector3(
+        GameLayoutManager.CharacterHidePosition.x,
+        GameLayoutManager.CharacterStartPosition.y,
+        0f
+    );
+
+    float duration = GameLayoutManager.WalkToTableDuration;
+
+    _movementCoroutine = StartCoroutine(
+        MoveRoutine(startPos, walkTargetPos, duration, () =>
         {
-            StopIdleBob();
-            SetState(CharacterState.Moving);
-
-            if (_movementCoroutine != null)
-            {
-                StopCoroutine(_movementCoroutine);
-            }
-
-            Vector3 startPos = new Vector3(transform.position.x, GameLayoutManager.CharacterStartPosition.y, transform.position.z);
-            transform.position = startPos;
-            Vector3 walkTargetPos = new Vector3(GameLayoutManager.CharacterHidePosition.x, GameLayoutManager.CharacterStartPosition.y, 0f);
-            float duration = GameLayoutManager.WalkToTableDuration;
-
-            _movementCoroutine = StartCoroutine(MoveRoutine(startPos, walkTargetPos, duration, () =>
-            {
-                transform.position = GameLayoutManager.CharacterHidePosition;
-                SetState(CharacterState.Hiding);
-                onComplete?.Invoke();
-            }));
-        }
+            transform.position = GameLayoutManager.CharacterHidePosition;
+            SetState(CharacterState.Hiding);
+            onComplete?.Invoke();
+        })
+    );
+}
 
         public void RunTowardDoor(Action onInterrupted = null, Action onComplete = null)
+{
+    if (!gameObject.activeInHierarchy)
+        gameObject.SetActive(true);
+
+    StopIdleBob();
+    SetState(CharacterState.Moving);
+
+    if (_movementCoroutine != null)
+    {
+        StopCoroutine(_movementCoroutine);
+        _movementCoroutine = null;
+    }
+
+    Vector3 startPos = new Vector3(
+        transform.position.x,
+        GameLayoutManager.CharacterStartPosition.y,
+        transform.position.z
+    );
+
+    transform.position = startPos;
+
+    Vector3 targetPos = GameLayoutManager.CharacterRunTarget;
+    float duration = GameLayoutManager.RunDuration;
+
+    _movementCoroutine = StartCoroutine(
+        MoveRoutine(startPos, targetPos, duration, () =>
         {
-            StopIdleBob();
-            SetState(CharacterState.Moving);
-
-            if (_movementCoroutine != null)
-            {
-                StopCoroutine(_movementCoroutine);
-            }
-
-            Vector3 startPos = new Vector3(transform.position.x, GameLayoutManager.CharacterStartPosition.y, transform.position.z);
-            transform.position = startPos;
-            Vector3 targetPos = GameLayoutManager.CharacterRunTarget;
-            float duration = GameLayoutManager.RunDuration;
-
-            _movementCoroutine = StartCoroutine(MoveRoutine(startPos, targetPos, duration, () =>
-            {
-                onComplete?.Invoke();
-            }));
-        }
+            onComplete?.Invoke();
+        })
+    );
+}
 
         public void InterruptMovement()
         {
@@ -335,10 +373,15 @@ namespace DisasterSurvival.Character
 
         private void StartIdleBob()
         {
+            if (!gameObject.activeInHierarchy)
+                return;
+
             if (_idleBobCoroutine != null)
             {
                 StopCoroutine(_idleBobCoroutine);
+                _idleBobCoroutine = null;
             }
+
             _idleBobCoroutine = StartCoroutine(IdleBobRoutine());
         }
 

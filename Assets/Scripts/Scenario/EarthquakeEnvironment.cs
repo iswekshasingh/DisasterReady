@@ -125,6 +125,7 @@ namespace DisasterSurvival.Scenario
         public IEnumerator PlayOutcome(string questionId, string optionId, OutcomeType outcomeType)
         {
             CharacterController2D character = GameLayoutManager.Get<CharacterController2D>();
+            Debug.Log($"[Earthquake] Character found: {character != null}");
             BannerUI banner = GameLayoutManager.Get<BannerUI>();
             AudioManager audio = GameLayoutManager.Get<AudioManager>();
             CameraShake cameraShake = GameLayoutManager.Get<CameraShake>();

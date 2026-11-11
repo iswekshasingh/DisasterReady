@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -7,6 +8,7 @@ namespace DisasterSurvival.Backend
     // ==========================================
     // Authentication DTOs
     // ==========================================
+
     [Serializable]
     public class RegisterRequest
     {
@@ -23,8 +25,8 @@ namespace DisasterSurvival.Backend
     [Serializable]
     public class LoginRequest
     {
-        [JsonProperty("username")]
-        public string username;
+        [JsonProperty("email")]
+        public string email;
 
         [JsonProperty("password")]
         public string password;
@@ -36,16 +38,31 @@ namespace DisasterSurvival.Backend
         [JsonProperty("id")]
         public string id;
 
+        [JsonProperty("userId")]
+        public string userId;
+
         [JsonProperty("username")]
         public string username;
 
         [JsonProperty("email")]
         public string email;
+
+        [JsonProperty("role")]
+        public string role;
+
+        public string GetId() =>
+            !string.IsNullOrEmpty(id) ? id : userId;
     }
 
     [Serializable]
     public class AuthResponse
     {
+        [JsonProperty("success")]
+        public bool success;
+
+        [JsonProperty("message")]
+        public string message;
+
         [JsonProperty("token")]
         public string token;
 
@@ -55,12 +72,24 @@ namespace DisasterSurvival.Backend
         [JsonProperty("user")]
         public UserDto user;
 
-        public string GetToken() => !string.IsNullOrEmpty(token) ? token : jwt;
+        public string GetToken() =>
+            !string.IsNullOrEmpty(token) ? token : jwt;
+    }
+
+    [Serializable]
+    public class MeResponse
+    {
+        [JsonProperty("success")]
+        public bool success;
+
+        [JsonProperty("user")]
+        public UserDto user;
     }
 
     // ==========================================
     // Scenario DTOs
     // ==========================================
+
     [Serializable]
     public class ScenarioItem
     {
@@ -76,35 +105,64 @@ namespace DisasterSurvival.Backend
         [JsonProperty("description")]
         public string description;
 
-        public string GetId() => !string.IsNullOrEmpty(id) ? id : mongoId;
+        [JsonProperty("disasterType")]
+        public string disasterType;
+
+        [JsonProperty("difficulty")]
+        public string difficulty;
+
+        [JsonProperty("estimatedDuration")]
+        public int estimatedDuration;
+
+        [JsonProperty("passingScore")]
+        public int passingScore;
+
+        [JsonProperty("maxScore")]
+        public int maxScore;
+
+        public string GetId() =>
+            !string.IsNullOrEmpty(id) ? id : mongoId;
+    }
+
+    [Serializable]
+    public class ScenariosResponse
+    {
+        [JsonProperty("success")]
+        public bool success;
+
+        [JsonProperty("count")]
+        public int count;
+
+        [JsonProperty("scenarios")]
+        public List<ScenarioItem> scenarios;
     }
 
     [Serializable]
     public class OptionItem
     {
-        [JsonProperty("id")]
+        [JsonProperty("optionId")]
         public string id;
 
-        [JsonProperty("label")]
+        [JsonProperty("text")]
         public string label;
 
-        [JsonProperty("text")]
-        public string text;
-
-        public string GetLabel() => !string.IsNullOrEmpty(label) ? label : text;
+        public string GetLabel() => label;
     }
 
     [Serializable]
     public class QuestionItem
     {
-        [JsonProperty("id")]
+        [JsonProperty("questionId")]
         public string id;
 
-        [JsonProperty("prompt")]
+        [JsonProperty("question")]
         public string prompt;
 
         [JsonProperty("options")]
         public List<OptionItem> options = new List<OptionItem>();
+
+        [JsonProperty("points")]
+        public int points;
     }
 
     [Serializable]
@@ -122,15 +180,45 @@ namespace DisasterSurvival.Backend
         [JsonProperty("description")]
         public string description;
 
+        [JsonProperty("disasterType")]
+        public string disasterType;
+
+        [JsonProperty("difficulty")]
+        public string difficulty;
+
+        [JsonProperty("estimatedDuration")]
+        public int estimatedDuration;
+
+        [JsonProperty("passingScore")]
+        public int passingScore;
+
+        [JsonProperty("maxScore")]
+        public int maxScore;
+
+        [JsonProperty("instructions")]
+        public string instructions;
+
         [JsonProperty("questions")]
         public List<QuestionItem> questions = new List<QuestionItem>();
 
-        public string GetId() => !string.IsNullOrEmpty(id) ? id : mongoId;
+        public string GetId() =>
+            !string.IsNullOrEmpty(id) ? id : mongoId;
+    }
+
+    [Serializable]
+    public class ScenarioDetailResponse
+    {
+        [JsonProperty("success")]
+        public bool success;
+
+        [JsonProperty("scenario")]
+        public ScenarioDetail scenario;
     }
 
     // ==========================================
     // Attempt Submission DTOs
     // ==========================================
+
     [Serializable]
     public class AnswerSubmission
     {
@@ -165,42 +253,108 @@ namespace DisasterSurvival.Backend
     [Serializable]
     public class AttemptResultResponse
     {
+        [JsonProperty("id")]
+        public string id;
+
+        [JsonProperty("scenarioId")]
+        public string scenarioId;
+
         [JsonProperty("score")]
         public int score;
+
+        [JsonProperty("maxScore")]
+        public int maxScore;
+
+        [JsonProperty("correctAnswers")]
+        public int correctAnswers;
+
+        [JsonProperty("totalQuestions")]
+        public int totalQuestions;
 
         [JsonProperty("passed")]
         public bool passed;
 
-        [JsonProperty("points")]
-        public int points;
-
-        [JsonProperty("aiFeedback")]
-        public string aiFeedback;
+        [JsonProperty("results")]
+        public List<QuestionResult> results = new List<QuestionResult>();
 
         [JsonProperty("feedback")]
         public string feedback;
+    }
 
-        [JsonProperty("id")]
-        public string id;
+    [Serializable]
+    public class QuestionResult
+    {
+        [JsonProperty("questionId")]
+        public string questionId;
+
+        [JsonProperty("selectedOptionId")]
+        public string selectedOptionId;
+
+        [JsonProperty("correctOptionId")]
+        public string correctOptionId;
+
+        [JsonProperty("correct")]
+        public bool correct;
+
+        [JsonProperty("pointsEarned")]
+        public int pointsEarned;
+
+        [JsonProperty("explanation")]
+        public string explanation;
+    }
+
+    [Serializable]
+    public class AttemptSubmissionResponse
+    {
+        [JsonProperty("success")]
+        public bool success;
+
+        [JsonProperty("message")]
+        public string message;
+
+        [JsonProperty("attempt")]
+        public AttemptResultResponse attempt;
     }
 
     // ==========================================
     // Leaderboard DTOs
     // ==========================================
+
     [Serializable]
     public class LeaderboardEntry
     {
+        [JsonProperty("rank")]
+        public int rank;
+
+        [JsonProperty("id")]
+        public string id;
+
         [JsonProperty("username")]
         public string username;
 
-        [JsonProperty("score")]
-        public int score;
+        [JsonProperty("fullName")]
+        public string fullName;
 
-        [JsonProperty("points")]
-        public int points;
+        [JsonProperty("totalPoints")]
+        public int totalPoints;
 
-        [JsonProperty("createdAt")]
-        public string createdAt;
+        [JsonProperty("level")]
+        public int level;
+
+        [JsonProperty("badges")]
+        public List<string> badges = new List<string>();
+    }
+
+    [Serializable]
+    public class LeaderboardResponse
+    {
+        [JsonProperty("success")]
+        public bool success;
+
+        [JsonProperty("count")]
+        public int count;
+
+        [JsonProperty("leaderboard")]
+        public List<LeaderboardEntry> leaderboard;
     }
 }
-

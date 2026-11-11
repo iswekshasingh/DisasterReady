@@ -106,26 +106,37 @@ namespace DisasterSurvival.UI
             }
         }
 
-        public void DisplayMessage(string message, BannerStyle style = BannerStyle.Standard, bool typewriter = true, Action onComplete = null)
-        {
-            SetStyle(style);
-            _onTypewriterComplete = onComplete;
+        public void DisplayMessage(
+    string message,
+    BannerStyle style = BannerStyle.Standard,
+    bool typewriter = true,
+    Action onComplete = null)
+{
+    // Activate the banner before starting its coroutine
+    if (!gameObject.activeSelf)
+    {
+        gameObject.SetActive(true);
+    }
 
-            if (_typewriterCoroutine != null)
-            {
-                StopCoroutine(_typewriterCoroutine);
-            }
+    SetStyle(style);
+    _onTypewriterComplete = onComplete;
 
-            if (typewriter)
-            {
-                _typewriterCoroutine = StartCoroutine(TypewriterRoutine(message));
-            }
-            else
-            {
-                _dialogueText.text = message;
-                _onTypewriterComplete?.Invoke();
-            }
-        }
+    if (_typewriterCoroutine != null)
+    {
+        StopCoroutine(_typewriterCoroutine);
+        _typewriterCoroutine = null;
+    }
+
+    if (typewriter)
+    {
+        _typewriterCoroutine = StartCoroutine(TypewriterRoutine(message));
+    }
+    else
+    {
+        _dialogueText.text = message;
+        _onTypewriterComplete?.Invoke();
+    }
+}
 
         private IEnumerator TypewriterRoutine(string fullText)
         {

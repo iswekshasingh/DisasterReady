@@ -3,13 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { leaderboardApi } from '../utils/api';
 import {
-  User,
   Trophy,
   Zap,
   LogOut,
   RefreshCw,
   ShieldCheck,
-  Award
+  Award,
+  Gamepad2,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
@@ -61,6 +61,14 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     loadUserData();
+
+    // Auto-refresh stats when Unity reports a completed attempt
+    const handleAttemptDone = () => {
+      console.log('[Dashboard] Unity attempt detected — refreshing stats from PostgreSQL');
+      loadUserData();
+    };
+    window.addEventListener('unity:attemptSubmitted', handleAttemptDone);
+    return () => window.removeEventListener('unity:attemptSubmitted', handleAttemptDone);
   }, [user]);
 
   const handleLogout = () => {
@@ -230,7 +238,7 @@ export const DashboardPage = () => {
           </div>
 
           <Link to="/play/earthquake" className="btn btn-primary btn-lg" style={{ boxShadow: '0 4px 20px rgba(255, 107, 53, 0.4)' }}>
-            <Zap size={18} />
+            <Gamepad2 size={18} />
             <span>Play Now</span>
           </Link>
         </div>

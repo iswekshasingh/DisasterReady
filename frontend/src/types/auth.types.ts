@@ -38,4 +38,3 @@ export interface DecodedAuthToken {
   iat: number;
   exp: number;
 }
-

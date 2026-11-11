@@ -7,4 +7,3 @@ export const leaderboardService = {
     return data;
   },
 };
-

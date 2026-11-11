@@ -13,4 +13,3 @@ export interface LeaderboardResponse {
   count: number;
   leaderboard: LeaderboardUser[];
 }
-

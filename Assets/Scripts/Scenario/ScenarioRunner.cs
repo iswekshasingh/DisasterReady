@@ -32,6 +32,11 @@ namespace DisasterSurvival.Scenario
         private string _activeScenarioBackendId = "";
         private bool _isOfflineFallbackMode = false;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void NotifyAttemptSubmittedToWeb(string responseJson);
+#endif
+
         public int CurrentSimulationIndex => _currentSimIndex;
         public SimulationDefinition CurrentDefinition => _currentDefinition;
 
@@ -420,6 +425,17 @@ namespace DisasterSurvival.Scenario
 
                     ResultUI resultUI =
                         GameLayoutManager.Get<ResultUI>();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    try
+                    {
+                        NotifyAttemptSubmittedToWeb(JsonUtility.ToJson(response));
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[ScenarioRunner] WebGL event notification failed: {ex.Message}");
+                    }
+#endif
 
                     if (resultUI != null)
                     {

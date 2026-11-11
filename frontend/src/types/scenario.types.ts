@@ -48,3 +48,4 @@ export interface ScenarioDetailResponse {
   success: boolean;
   scenario: ScenarioDetail;
 }
+

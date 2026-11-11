@@ -15,3 +15,4 @@ export const scenarioService = {
     return data;
   },
 };
+

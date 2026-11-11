@@ -59,3 +59,4 @@ export const TableCell: React.FC<React.TdHTMLAttributes<HTMLTableCellElement>> =
 }) => (
   <td className={cn('p-3 align-middle', className)} {...props} />
 );
+

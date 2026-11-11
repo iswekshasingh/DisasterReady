@@ -26,3 +26,4 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
 
   return <>{children}</>;
 };
+

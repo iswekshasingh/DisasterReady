@@ -67,6 +67,9 @@ namespace DisasterSurvival.Scenario
             CharacterController2D character = GameLayoutManager.Get<CharacterController2D>();
             if (character != null)
             {
+                // The simulation picker hides the persistent player object. Reactivate it
+                // before resetting so its renderer and idle coroutine can run again.
+                character.gameObject.SetActive(true);
                 character.ResetToStart();
                 character.SetSortingOrder(GameLayoutManager.SortingOrderCharacter);
             }
@@ -137,8 +140,11 @@ namespace DisasterSurvival.Scenario
                 {
                     // Option A: Hide Under Table (Safe)
                     bool walked = false;
-                    if (character != null) character.WalkToTable(() => walked = true);
-                    while (!walked) yield return null;
+                    if (character != null)
+                    {
+                        character.WalkToTable(() => walked = true);
+                        while (!walked) yield return null;
+                    }
 
                     if (banner != null) banner.DisplayMessage(GameLayoutManager.EQ_Q1_Safe_Message, BannerStyle.Safe, true);
                     if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioSuccess);
@@ -179,8 +185,11 @@ namespace DisasterSurvival.Scenario
                 {
                     // Option A: Stay under cover (Safe)
                     bool debrisLanded = false;
-                    if (_debrisController != null) _debrisController.DropDebrisOnTable(() => debrisLanded = true);
-                    while (!debrisLanded) yield return null;
+                    if (_debrisController != null)
+                    {
+                        _debrisController.DropDebrisOnTable(() => debrisLanded = true);
+                        while (!debrisLanded) yield return null;
+                    }
 
                     if (banner != null) banner.DisplayMessage(GameLayoutManager.EQ_Q2_Safe_Message, BannerStyle.Safe, true);
                     if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioSuccess);
@@ -197,8 +206,11 @@ namespace DisasterSurvival.Scenario
                     yield return new WaitForSeconds(0.4f);
 
                     bool debrisLanded = false;
-                    if (_debrisController != null) _debrisController.DropDebrisOnPath(() => debrisLanded = true);
-                    while (!debrisLanded) yield return null;
+                    if (_debrisController != null)
+                    {
+                        _debrisController.DropDebrisOnPath(() => debrisLanded = true);
+                        while (!debrisLanded) yield return null;
+                    }
 
                     if (character != null) character.TriggerHurt();
 
@@ -238,6 +250,11 @@ namespace DisasterSurvival.Scenario
 
         public void Teardown()
         {
+            // ScenarioRunner already tears down the environment before destroying its
+            // component. OnDestroy calls this again later; don't let that second pass
+            // stop audio started by the next simulation.
+            if (_environmentRoot == null) return;
+
             CameraShake cameraShake = GameLayoutManager.Get<CameraShake>();
             if (cameraShake != null) cameraShake.StopShake();
 

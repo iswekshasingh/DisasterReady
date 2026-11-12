@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,24 +10,25 @@ using DisasterSurvival.Backend;
 
 namespace DisasterSurvival.Scenario
 {
+    /// <summary>
+    /// Generic, data-driven simulation runner that orchestrates any disaster scenario
+    /// via the ISimulationEnvironment interface and SimulationRegistry.
+    /// Manages beat transitions, decision prompts, answer tracking, duration measurement,
+    /// backend submissions, and progression to subsequent simulations.
+    /// </summary>
     public class ScenarioRunner : MonoBehaviour
     {
-        private const string PrefsHighestUnlockedKey =
-            "DISASTER_HIGHEST_UNLOCKED_SIM";
-
-        private const string EarthquakeBackendId =
-            "60717a20-e54e-4b95-9253-c9b132a1374e";
+        private const string PrefsHighestUnlockedKey = "DISASTER_HIGHEST_UNLOCKED_SIM";
+        private const string EarthquakeBackendId = "60717a20-e54e-4b95-9253-c9b132a1374e";
 
         private int _currentSimIndex = 0;
         private SimulationDefinition _currentDefinition;
         private ISimulationEnvironment _currentEnvironment;
 
-        private readonly List<AnswerSubmission> _recordedAnswers =
-            new List<AnswerSubmission>();
-
+        private readonly List<AnswerSubmission> _recordedAnswers = new List<AnswerSubmission>();
+        private readonly List<bool> _decisionWasSafe = new List<bool>();
         private int _safeDecisionsCount = 0;
         private float _simulationStartTime = 0f;
-
         private string _activeScenarioBackendId = "";
         private bool _isOfflineFallbackMode = false;
 
@@ -58,19 +58,15 @@ namespace DisasterSurvival.Scenario
 
                 _currentEnvironment = null;
             }
-
             GameLayoutManager.Unregister<ScenarioRunner>();
         }
-
-        // --------------------------------------------------
-        // SIMULATION START
-        // --------------------------------------------------
 
         public void StartOfflineSimulation(int index = -1)
         {
             if (index >= 0)
+            {
                 _currentSimIndex = index;
-
+            }
             _isOfflineFallbackMode = false;
             StartSimulationByIndex(_currentSimIndex);
         }
@@ -78,56 +74,43 @@ namespace DisasterSurvival.Scenario
         public void StartSimulationByIndex(int index)
         {
             StopAllCoroutines();
-
             _currentSimIndex = index;
-            _currentDefinition =
-                SimulationRegistry.GetSimulation(_currentSimIndex);
+            _currentDefinition = SimulationRegistry.GetSimulation(_currentSimIndex);
 
             if (_currentDefinition == null)
             {
-                Debug.LogError(
-                    $"[ScenarioRunner] Simulation not found: {index}");
+                Debug.LogError($"[ScenarioRunner] Simulation not found: {index}");
                 return;
             }
 
-            _activeScenarioBackendId =
-                _currentSimIndex == 0 ? EarthquakeBackendId : "";
-
+            _activeScenarioBackendId = _currentSimIndex == 0 ? EarthquakeBackendId : "";
             if (string.IsNullOrEmpty(_activeScenarioBackendId))
             {
                 _isOfflineFallbackMode = true;
             }
 
-            int highest = PlayerPrefs.GetInt(
-                PrefsHighestUnlockedKey, 0);
-
+            // Track highest unlocked simulation progression in PlayerPrefs
+            // TODO: Replace with backend user progress sync when user profile endpoint is connected
+            int highest = PlayerPrefs.GetInt(PrefsHighestUnlockedKey, 0);
             if (_currentSimIndex > highest)
             {
                 PlayerPrefs.SetInt(PrefsHighestUnlockedKey, _currentSimIndex);
                 PlayerPrefs.Save();
             }
 
-            Debug.Log(
-                $"[ScenarioRunner] Starting local simulation: " +
-                $"{_currentDefinition.DisplayTitle}");
-
             StartCoroutine(RunSimulationFlow());
         }
 
         public void StartNextSimulation()
         {
-            int nextIndex =
-                SimulationRegistry.GetNextIndex(_currentSimIndex);
+            int nextIndex = SimulationRegistry.GetNextIndex(_currentSimIndex);
+            Debug.Log($"[ScenarioRunner] Advancing from simulation {_currentSimIndex + 1} to {nextIndex + 1} ({SimulationRegistry.GetSimulation(nextIndex).DisplayTitle})...");
 
-            Debug.Log(
-                $"[ScenarioRunner] Advancing to simulation {nextIndex + 1}");
-
+            // In backend mode, check if we need to fall back to offline if the backend lacks this simulation
             if (GameLayoutManager.useBackend && nextIndex > 0)
             {
                 _isOfflineFallbackMode = true;
-
-                Debug.Log(
-                    "[ScenarioRunner] Next simulation is running offline.");
+                Debug.Log("[ScenarioRunner] Backend currently only provides earthquake scenario. Running next simulation in Offline Test Mode (attempt submission disabled).");
             }
             else
             {
@@ -137,183 +120,128 @@ namespace DisasterSurvival.Scenario
             StartSimulationByIndex(nextIndex);
         }
 
-        // --------------------------------------------------
-        // BACKEND SCENARIO START
-        // --------------------------------------------------
-
         public void StartBackendSimulation(ScenarioDetail detail)
         {
-            if (detail == null)
-            {
-                Debug.LogError(
-                    "[ScenarioRunner] Backend scenario detail is null.");
-                return;
-            }
-
-            string backendId = detail.GetId();
-
-            if (string.IsNullOrWhiteSpace(backendId))
-            {
-                Debug.LogError(
-                    "[ScenarioRunner] Backend scenario ID is missing.");
-                return;
-            }
-
             StopAllCoroutines();
-
             _isOfflineFallbackMode = false;
-            _activeScenarioBackendId = backendId;
+            _activeScenarioBackendId = detail.GetId();
 
-            Debug.Log(
-                $"[ScenarioRunner] Backend Scenario ID: {backendId}");
+            // Match simulation environment by keyword in title/id ("earthquake", "fire")
+            string searchTitle = (!string.IsNullOrEmpty(detail.title) ? detail.title : "") + " " + detail.GetId();
+            _currentSimIndex = SimulationRegistry.IndexOf(searchTitle);
+            _currentDefinition = SimulationRegistry.GetSimulation(_currentSimIndex);
 
-            string searchTitle =
-                (detail.title ?? "") + " " + backendId;
-
-            _currentSimIndex =
-                SimulationRegistry.IndexOf(searchTitle);
-
-            _currentDefinition =
-                SimulationRegistry.GetSimulation(_currentSimIndex);
-
-            if (_currentDefinition == null)
+            // If backend provided custom questions/labels, adapt them while preserving local outcome maps
+            if (detail.questions != null && detail.questions.Count > 0)
             {
-                Debug.LogError(
-                    "[ScenarioRunner] No matching local simulation found.");
-                return;
+                _currentDefinition.Questions.Clear();
+                foreach (QuestionItem qItem in detail.questions)
+                {
+                    List<DecisionOption> opts = new List<DecisionOption>();
+                    if (qItem.options != null)
+                    {
+                        foreach (OptionItem oItem in qItem.options)
+                        {
+                            opts.Add(new DecisionOption(oItem.id, oItem.GetLabel()));
+                        }
+                    }
+                    _currentDefinition.Questions.Add(new QuestionData(qItem.id, qItem.prompt, opts));
+                }
             }
-
-            // IMPORTANT:
-            // Keep local Questions and Options unchanged.
-            // EarthquakeEnvironment uses their IDs to trigger animations.
-            // Backend data is used for authentication, scenario identity,
-            // and attempt submission.
-
-            Debug.Log(
-                $"[ScenarioRunner] Using local gameplay definition: " +
-                $"{_currentDefinition.DisplayTitle}");
 
             StartCoroutine(RunSimulationFlow());
         }
 
-        // --------------------------------------------------
-        // MAIN SIMULATION FLOW
-        // --------------------------------------------------
-
         private IEnumerator RunSimulationFlow()
         {
             _recordedAnswers.Clear();
+            _decisionWasSafe.Clear();
             _safeDecisionsCount = 0;
             _simulationStartTime = Time.time;
 
-            // Teardown previous environment
+            // 1. Teardown previous simulation environment if active
             if (_currentEnvironment != null)
             {
                 _currentEnvironment.Teardown();
-
                 if (_currentEnvironment is MonoBehaviour mb && mb != null)
                 {
                     Destroy(mb.gameObject);
                 }
-
                 _currentEnvironment = null;
             }
 
-            // Build environment
-            Transform worldRoot =
-                GameObject.Find("[World]")?.transform;
-
-            _currentEnvironment =
-                _currentDefinition.CreateEnvironment();
-
+            // 2. Build new environment for current simulation
+            Transform worldRoot = GameObject.Find("[World]")?.transform;
+            // The starter screen intentionally hides the persistent character. Restore it
+            // before any environment starts movement coroutines on the character object.
+            CharacterController2D player = GameLayoutManager.Get<CharacterController2D>();
+            if (player != null)
+            {
+                player.gameObject.SetActive(true);
+                player.ResetToStart();
+            }
+            _currentEnvironment = _currentDefinition.CreateEnvironment();
             if (_currentEnvironment != null)
             {
                 _currentEnvironment.Build(worldRoot);
             }
 
-            // Update simulation indicator
-            SimulationIndicatorUI indicator =
-                GameLayoutManager.Get<SimulationIndicatorUI>();
-
+            // 3. Update simulation indicator header in UI
+            SimulationIndicatorUI indicator = GameLayoutManager.Get<SimulationIndicatorUI>();
             if (indicator != null)
             {
-                indicator.SetSimulation(
-                    _currentSimIndex + 1,
-                    SimulationRegistry.Count,
-                    _currentDefinition.DisplayTitle,
-                    _isOfflineFallbackMode);
+                indicator.SetSimulation(_currentSimIndex + 1, SimulationRegistry.Count, _currentDefinition.DisplayTitle, _isOfflineFallbackMode);
             }
 
-            DecisionUI decision =
-                GameLayoutManager.Get<DecisionUI>();
+            DecisionUI decision = GameLayoutManager.Get<DecisionUI>();
+            BannerUI banner = GameLayoutManager.Get<BannerUI>();
 
-            BannerUI banner =
-                GameLayoutManager.Get<BannerUI>();
-
-            if (decision == null)
-            {
-                Debug.LogError(
-                    "[ScenarioRunner] DecisionUI not found.");
-                yield break;
-            }
-
-            int questionCount =
-                _currentDefinition.Questions.Count;
-
+            // 4. Run through all beats
+            int questionCount = _currentDefinition.Questions.Count;
             for (int i = 0; i < questionCount; i++)
             {
-                QuestionData question =
-                    _currentDefinition.Questions[i];
+                QuestionData q = _currentDefinition.Questions[i];
 
+                // Execute beat intro (alarms, visual cues, camera shake, typewriter alerts)
                 if (_currentEnvironment != null)
                 {
-                    yield return StartCoroutine(
-                        _currentEnvironment.PlayBeatIntro(i, question));
+                    yield return StartCoroutine(_currentEnvironment.PlayBeatIntro(i, q));
                 }
 
+                // Show player choice options
                 string chosenOption = null;
-
-                Debug.Log(
-                    $"[ScenarioRunner] Showing question: {question.Id}");
-
-                decision.ShowOptions(
-                    question.Options,
-                    optionId => chosenOption = optionId);
+                if (decision != null)
+                {
+                    decision.gameObject.SetActive(true);
+                    decision.ShowOptions(q.Options, opt => chosenOption = opt);
+                }
+                else
+                {
+                    Debug.LogError("[ScenarioRunner] DecisionUI is missing; cannot present simulation choices.");
+                    yield break;
+                }
 
                 while (chosenOption == null)
                 {
                     yield return null;
                 }
 
-                Debug.Log(
-                    $"[ScenarioRunner] Selected option: " +
-                    $"Question={question.Id}, Option={chosenOption}");
+                RecordAnswer(q.Id, chosenOption);
 
-                RecordAnswer(question.Id, chosenOption);
-
-                OutcomeInfo outcome =
-                    _currentDefinition.GetOutcome(
-                        question.Id, chosenOption);
-
+                // Execute outcome animation & feedback
+                OutcomeInfo outcome = _currentDefinition.GetOutcome(q.Id, chosenOption);
                 if (_currentEnvironment != null)
                 {
-                    yield return StartCoroutine(
-                        _currentEnvironment.PlayOutcome(
-                            question.Id,
-                            chosenOption,
-                            outcome.Outcome));
+                    yield return StartCoroutine(_currentEnvironment.PlayOutcome(q.Id, chosenOption, outcome.Outcome));
                 }
             }
 
-            if (banner != null)
-                banner.Clear();
+            if (banner != null) banner.Clear();
 
-            int totalElapsedSeconds = Mathf.Max(
-                1,
-                Mathf.RoundToInt(Time.time - _simulationStartTime));
+            // 5. Evaluate completion & display results
+            int totalElapsedSeconds = Mathf.Max(1, Mathf.RoundToInt(Time.time - _simulationStartTime));
 
-            if (GameLayoutManager.useBackend &&
-                !_isOfflineFallbackMode)
+            if (GameLayoutManager.useBackend && !_isOfflineFallbackMode)
             {
                 SubmitToBackend(totalElapsedSeconds);
             }
@@ -323,36 +251,22 @@ namespace DisasterSurvival.Scenario
             }
         }
 
-        // --------------------------------------------------
-        // ANSWER RECORDING
-        // --------------------------------------------------
-
-        private void RecordAnswer(
-            string questionId,
-            string optionId)
+        private void RecordAnswer(string questionId, string optionId)
         {
-            _recordedAnswers.Add(
-                new AnswerSubmission(questionId, optionId));
+            _recordedAnswers.Add(new AnswerSubmission(questionId, optionId));
 
-            OutcomeInfo outcome =
-                _currentDefinition.GetOutcome(questionId, optionId);
-
-            if (outcome != null &&
-                outcome.Outcome == OutcomeType.Safe)
+            OutcomeInfo outcome = _currentDefinition.GetOutcome(questionId, optionId);
+            bool safe = outcome != null && outcome.Outcome == OutcomeType.Safe;
+            _decisionWasSafe.Add(safe);
+            if (safe)
             {
                 _safeDecisionsCount++;
             }
         }
 
-        // --------------------------------------------------
-        // OFFLINE RESULTS
-        // --------------------------------------------------
-
         private void ShowOfflineResults()
         {
-            ResultUI resultUI =
-                GameLayoutManager.Get<ResultUI>();
-
+            ResultUI resultUI = GameLayoutManager.Get<ResultUI>();
             if (resultUI != null)
             {
                 resultUI.ShowOfflineResults(
@@ -360,71 +274,38 @@ namespace DisasterSurvival.Scenario
                     _currentDefinition.Questions.Count,
                     _currentSimIndex,
                     _currentDefinition,
-                    onReplay: () =>
-                        StartSimulationByIndex(_currentSimIndex),
-                    onNextSim: () =>
-                        StartNextSimulation());
+                    onReplay: () => StartSimulationByIndex(_currentSimIndex),
+                    onNextSim: () => StartNextSimulation(),
+                    decisionWasSafe: _decisionWasSafe
+                );
             }
         }
 
-        // --------------------------------------------------
-        // BACKEND ATTEMPT SUBMISSION
-        // --------------------------------------------------
-
         private void SubmitToBackend(int timeSpentSeconds)
         {
-            if (string.IsNullOrEmpty(_activeScenarioBackendId))
+            LoadingSpinnerUI spinner = GameLayoutManager.Get<LoadingSpinnerUI>();
+            if (spinner != null) spinner.Show(GameLayoutManager.TextAnalyzingDecisions);
+
+            AttemptSubmissionRequest payload = new AttemptSubmissionRequest
             {
-                Debug.LogWarning(
-                    $"[ScenarioRunner] Simulation '{_currentDefinition?.DisplayTitle}' has no backend scenario ID. Showing offline results.");
-                ShowOfflineResults();
-                return;
-            }
+                scenarioId = _activeScenarioBackendId,
+                answers = new List<AnswerSubmission>(_recordedAnswers),
+                timeSpent = timeSpentSeconds
+            };
 
-            LoadingSpinnerUI spinner =
-                GameLayoutManager.Get<LoadingSpinnerUI>();
-
-            if (spinner != null)
-                spinner.Show(GameLayoutManager.TextAnalyzingDecisions);
-
-            AttemptSubmissionRequest payload =
-                new AttemptSubmissionRequest
-                {
-                    scenarioId = _activeScenarioBackendId,
-                    answers = new List<AnswerSubmission>(
-                        _recordedAnswers),
-                    timeSpent = timeSpentSeconds
-                };
-
-            Debug.Log(
-                $"[ScenarioRunner] Submitting scenario ID: " +
-                $"{payload.scenarioId}");
-
-            ApiClient api =
-                GameLayoutManager.Get<ApiClient>();
-
+            ApiClient api = GameLayoutManager.Get<ApiClient>();
             if (api == null)
             {
-                if (spinner != null)
-                    spinner.Hide();
-
-                Debug.LogError(
-                    "[ScenarioRunner] ApiClient not found.");
-
+                if (spinner != null) spinner.Hide();
                 ShowOfflineResults();
                 return;
             }
 
-            api.SubmitAttempt(
-                payload,
-
+            api.SubmitAttempt(payload,
                 response =>
                 {
-                    if (spinner != null)
-                        spinner.Hide();
-
-                    ResultUI resultUI =
-                        GameLayoutManager.Get<ResultUI>();
+                    if (spinner != null) spinner.Hide();
+                    ResultUI resultUI = GameLayoutManager.Get<ResultUI>();
 
 #if UNITY_WEBGL && !UNITY_EDITOR
                     try
@@ -443,82 +324,47 @@ namespace DisasterSurvival.Scenario
                             response,
                             _currentSimIndex,
                             _currentDefinition,
-                            onPlayAgain: () =>
-                                StartSimulationByIndex(_currentSimIndex),
-                            onNextSim: () =>
-                                StartNextSimulation(),
-                            onOpenLeaderboard: () =>
-                                FetchAndShowLeaderboard());
+                            onPlayAgain: () => StartSimulationByIndex(_currentSimIndex),
+                            onNextSim: () => StartNextSimulation(),
+                            onOpenLeaderboard: () => FetchAndShowLeaderboard(),
+                            decisionWasSafe: _decisionWasSafe
+                        );
                     }
                 },
-
                 error =>
                 {
-                    if (spinner != null)
-                        spinner.Hide();
-
-                    Debug.LogError(
-                        $"[ScenarioRunner] Attempt submission failed: {error}");
-
-                    ResultUI resultUI =
-                        GameLayoutManager.Get<ResultUI>();
-
+                    if (spinner != null) spinner.Hide();
+                    ResultUI resultUI = GameLayoutManager.Get<ResultUI>();
                     if (resultUI != null)
                     {
-                        resultUI.ShowNetworkFailure(
-                            error,
-                            () => SubmitToBackend(timeSpentSeconds));
+                        resultUI.ShowNetworkFailure(error, () => SubmitToBackend(timeSpentSeconds));
                     }
-                });
+                }
+            );
         }
-
-        // --------------------------------------------------
-        // LEADERBOARD
-        // --------------------------------------------------
 
         private void FetchAndShowLeaderboard()
         {
-            LoadingSpinnerUI spinner =
-                GameLayoutManager.Get<LoadingSpinnerUI>();
+            LoadingSpinnerUI spinner = GameLayoutManager.Get<LoadingSpinnerUI>();
+            if (spinner != null) spinner.Show("Fetching Leaderboard...");
 
-            if (spinner != null)
-                spinner.Show("Fetching Leaderboard...");
-
-            ApiClient api =
-                GameLayoutManager.Get<ApiClient>();
-
-            if (api == null)
+            ApiClient api = GameLayoutManager.Get<ApiClient>();
+            if (api != null)
             {
-                if (spinner != null)
-                    spinner.Hide();
-
-                Debug.LogError(
-                    "[ScenarioRunner] ApiClient not found.");
-
-                return;
+                api.GetLeaderboard(
+                    entries =>
+                    {
+                        if (spinner != null) spinner.Hide();
+                        ResultUI resultUI = GameLayoutManager.Get<ResultUI>();
+                        if (resultUI != null) resultUI.DisplayLeaderboard(entries);
+                    },
+                    err =>
+                    {
+                        if (spinner != null) spinner.Hide();
+                        Debug.LogError($"[ScenarioRunner] Failed to fetch leaderboard: {err}");
+                    }
+                );
             }
-
-            api.GetLeaderboard(
-                entries =>
-                {
-                    if (spinner != null)
-                        spinner.Hide();
-
-                    ResultUI resultUI =
-                        GameLayoutManager.Get<ResultUI>();
-
-                    if (resultUI != null)
-                        resultUI.DisplayLeaderboard(entries);
-                },
-
-                error =>
-                {
-                    if (spinner != null)
-                        spinner.Hide();
-
-                    Debug.LogError(
-                        $"[ScenarioRunner] Failed to fetch leaderboard: {error}");
-                });
         }
     }
 }

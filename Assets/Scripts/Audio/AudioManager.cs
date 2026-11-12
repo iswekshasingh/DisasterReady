@@ -10,16 +10,12 @@ namespace DisasterSurvival.Audio
     /// </summary>
     public class AudioManager : MonoBehaviour
     {
-        private AudioSource _sfxSource;
         private AudioSource _loopSource;
         private readonly Dictionary<string, AudioClip> _clipCache = new Dictionary<string, AudioClip>();
+        private readonly Dictionary<string, AudioSource> _activeSfxSources = new Dictionary<string, AudioSource>();
 
         private void Awake()
         {
-            _sfxSource = gameObject.AddComponent<AudioSource>();
-            _sfxSource.playOnAwake = false;
-            _sfxSource.volume = 1.0f;
-
             _loopSource = gameObject.AddComponent<AudioSource>();
             _loopSource.playOnAwake = false;
             _loopSource.loop = true;
@@ -30,6 +26,7 @@ namespace DisasterSurvival.Audio
 
         private void OnDestroy()
         {
+            StopAllSounds();
             GameLayoutManager.Unregister<AudioManager>();
         }
 
@@ -50,13 +47,39 @@ namespace DisasterSurvival.Audio
         public void PlaySound(string resourcePath)
         {
             AudioClip clip = GetOrLoadClip(resourcePath);
-            if (clip != null && _sfxSource != null)
+            if (clip == null) return;
+
+            // Give each named effect its own source so a long clip can be stopped without
+            // cutting off overlapping sounds such as water and drowning audio.
+            StopSound(resourcePath);
+            AudioSource source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.loop = false;
+            source.volume = 1f;
+            source.clip = clip;
+            _activeSfxSources[resourcePath] = source;
+            source.Play();
+        }
+
+        public void StopSound(string resourcePath)
+        {
+            if (string.IsNullOrEmpty(resourcePath) || !_activeSfxSources.TryGetValue(resourcePath, out AudioSource source)) return;
+            _activeSfxSources.Remove(resourcePath);
+            if (source != null)
             {
-                _sfxSource.PlayOneShot(clip);
+                source.Stop();
+                Destroy(source);
             }
         }
 
-        public void PlayLoop(string resourcePath)
+        public void StopAllSounds()
+        {
+            if (_activeSfxSources.Count == 0) return;
+            var paths = new List<string>(_activeSfxSources.Keys);
+            foreach (string path in paths) StopSound(path);
+        }
+
+        public void PlayLoop(string resourcePath, float volume = 0.75f)
         {
             AudioClip clip = GetOrLoadClip(resourcePath);
             if (clip != null && _loopSource != null)
@@ -66,6 +89,7 @@ namespace DisasterSurvival.Audio
                     return;
                 }
                 _loopSource.clip = clip;
+                _loopSource.volume = Mathf.Clamp01(volume);
                 _loopSource.Play();
             }
         }

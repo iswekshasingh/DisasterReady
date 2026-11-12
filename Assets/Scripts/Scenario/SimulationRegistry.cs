@@ -24,6 +24,7 @@ namespace DisasterSurvival.Scenario
             _simulations.Clear();
             _simulations.Add(CreateEarthquakeDefinition());
             _simulations.Add(CreateFireDefinition());
+            _simulations.Add(CreateFloodDefinition());
         }
 
         public static int Count => _simulations.Count;
@@ -109,6 +110,8 @@ namespace DisasterSurvival.Scenario
                     "• COVER your head and neck under a sturdy table.\n" +
                     "• HOLD ON until the shaking stops.\n" +
                     "• Use stairs to evacuate; never use elevators.",
+                ResultCheckpointLabels = new List<string> { "DROPPED AND TOOK COVER", "STAYED UNDER COVER", "USED THE STAIRS" },
+                ResultLearningLabels = new List<string> { "Drop, cover, and hold on", "Stay under sturdy shelter", "Never use elevators after shaking" },
                 EnvironmentFactory = () =>
                 {
                     GameObject host = new GameObject("EarthquakeEnvironment_Host");
@@ -182,6 +185,8 @@ namespace DisasterSurvival.Scenario
                 EducationalSummaryPartial = GameLayoutManager.FireSummaryPartial,
                 EducationalSummaryHazard = GameLayoutManager.FireSummaryHazard,
                 KeyPrinciplesText = GameLayoutManager.FireKeyPrinciples,
+                ResultCheckpointLabels = new List<string> { "CHECKED THE DOOR", "STAYED LOW UNDER SMOKE", "WAITED AT THE REFUGE" },
+                ResultLearningLabels = new List<string> { "Check doors for heat", "Crawl below smoke", "Wait for rescue at a safe refuge" },
                 EnvironmentFactory = () =>
                 {
                     GameObject host = new GameObject("FireEnvironment_Host");
@@ -242,6 +247,39 @@ namespace DisasterSurvival.Scenario
                 new OutcomeInfo(OutcomeType.Harm, GameLayoutManager.FR_Q3_Harm_Belongings_Message);
 
             return def;
+        }
+
+        private static SimulationDefinition CreateFloodDefinition()
+        {
+            SimulationDefinition d = new SimulationDefinition {
+                SimulationKey = "flood", DisplayTitle = "Flash Flood Safety", BadgeText = "SIMULATION 3",
+                Description = "Move to high ground, stay away from electricity and floodwater, and wait for rescue.",
+                AccentColor = new Color(.15f, .62f, .9f), IntroText = GameLayoutManager.FloodIntro,
+                EducationalSummaryAllSafe = GameLayoutManager.FloodSummaryAllSafe,
+                EducationalSummaryPartial = GameLayoutManager.FloodSummaryPartial,
+                EducationalSummaryHazard = GameLayoutManager.FloodSummaryHazard,
+                KeyPrinciplesText = GameLayoutManager.FloodKeyPrinciples,
+                ResultCheckpointLabels = new List<string> { "MOVED UPSTAIRS EARLY", "AVOIDED WATER AND POWER", "CALLED FOR HELP" },
+                ResultLearningLabels = new List<string> { "Go up at first warning", "Avoid water and electricity", "Call 112 and wait for rescue" },
+                EnvironmentFactory = () => new GameObject("FloodEnvironment_Host").AddComponent<FloodEnvironment>()
+            };
+            AddFloodQuestion(d, GameLayoutManager.FloodQ1, GameLayoutManager.FloodQ1Prompt, GameLayoutManager.FloodQ1A, GameLayoutManager.FloodQ1B);
+            AddFloodQuestion(d, GameLayoutManager.FloodQ2, GameLayoutManager.FloodQ2Prompt, GameLayoutManager.FloodQ2A, GameLayoutManager.FloodQ2B);
+            d.Questions.Add(new QuestionData(GameLayoutManager.FloodQ3, GameLayoutManager.FloodQ3Prompt, new List<DecisionOption> {
+                new DecisionOption("A", GameLayoutManager.FloodQ3A), new DecisionOption("B", GameLayoutManager.FloodQ3B), new DecisionOption("C", GameLayoutManager.FloodQ3C)}));
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ1}_A"] = new OutcomeInfo(OutcomeType.Safe, GameLayoutManager.FloodQ1Safe);
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ1}_B"] = new OutcomeInfo(OutcomeType.Harm, GameLayoutManager.FloodQ1Harm);
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ2}_A"] = new OutcomeInfo(OutcomeType.Harm, GameLayoutManager.FloodQ2Harm);
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ2}_B"] = new OutcomeInfo(OutcomeType.Safe, GameLayoutManager.FloodQ2Safe);
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ3}_A"] = new OutcomeInfo(OutcomeType.Harm, GameLayoutManager.FloodQ3Drive);
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ3}_B"] = new OutcomeInfo(OutcomeType.Harm, GameLayoutManager.FloodQ3Walk);
+            d.OutcomeMap[$"{GameLayoutManager.FloodQ3}_C"] = new OutcomeInfo(OutcomeType.Safe, GameLayoutManager.FloodQ3Safe);
+            return d;
+        }
+
+        private static void AddFloodQuestion(SimulationDefinition d, string id, string prompt, string a, string b)
+        {
+            d.Questions.Add(new QuestionData(id, prompt, new List<DecisionOption> { new DecisionOption("A", a), new DecisionOption("B", b) }));
         }
     }
 }

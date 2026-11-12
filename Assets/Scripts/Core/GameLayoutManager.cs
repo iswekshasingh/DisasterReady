@@ -265,6 +265,7 @@ namespace DisasterSurvival.Core
         public static readonly string PathAudioSuccess = "Audio/success";
         public static readonly string PathAudioFail = "Audio/fail";
         public static readonly string PathAudioCharHurt = "Audio/char_hurt";
+        public static readonly string PathAudioSimulationSelectionMusic = "Audio/simulation_selection_music";
         #endregion
 
         #region 5. Fire Simulation (Simulation 2)
@@ -413,6 +414,75 @@ namespace DisasterSurvival.Core
         public static readonly Color StarterCardBorderColor = new Color(0.20f, 0.26f, 0.36f, 1f);
         public static readonly string TextLaunchSimulation = "START SIMULATION";
         public static readonly string TextSelectSimulation = "Select Simulation";
+        #endregion
+
+        #region 7. Flood Simulation
+        // Flood scene positions, sizes, timings, colours, resource names and educational copy.
+        public static readonly Vector2 FloodBackgroundSize = new Vector2(60f, 33.75f);
+        public static readonly Vector3 FloodBackgroundPosition = Vector3.zero;
+        public static readonly Vector3 FloodCharacterStart = new Vector3(-10f, -8f, 0f);
+        public static readonly Vector3 FloodUpperFloor = new Vector3(-4f, 5f, 0f);
+        public static readonly Vector3 FloodRooftop = new Vector3(-16f, -1.5f, 0f);
+        public static readonly Vector3 FloodStairTop = new Vector3(-21f, 10f, 0f);
+        public static readonly Vector3 FloodSecondStairWaypoint1 = new Vector3(14f, 0f, 0f);
+        public static readonly Vector3 FloodSecondStairWaypoint2 = new Vector3(20f, 6f, 0f);
+        public static readonly Vector3 FloodSecondStairTop = new Vector3(25f, 11f, 0f);
+        public static readonly Vector3 FloodUpperRoomCharacter = new Vector3(8f, -5f, 0f);
+        public static readonly Vector3 FloodElectricArcPosition = new Vector3(-25f, -9f, 0f);
+        public static readonly Vector2 FloodElectricArcSize = new Vector2(3.2f, 3.2f);
+        public static readonly float FloodElectricArcPause = 2.2f;
+        public static readonly float FloodWaterFrameDuration = 0.16f;
+        public static readonly int FloodWaterFrameCount = 9;
+        public static readonly Vector3 FloodWaterAnimationScale = new Vector3(3.81f, 3.29f, 1f);
+        public static readonly string FloodPathAudioRain = "Audio/rain";
+        public static readonly string FloodPathAudioSpark = "Audio/electric_spark";
+        public static readonly string FloodPathAudioAlarm = "Audio/flood_alarm";
+        public static readonly string FloodPathAudioShock = "Audio/electric_shock";
+        public static readonly string FloodPathAudioClimbing = "Audio/climbing_stairs";
+        public static readonly string FloodPathAudioWater = "Audio/water_flood";
+        public static readonly string FloodPathAudioHelicopter = "Audio/helicopter_rescue";
+        public static readonly string FloodPathAudioPhone = "Audio/phone_ring";
+        public static readonly string FloodPathAudioDrowning = "Audio/drowning";
+        public static readonly Vector3 FloodDrowningPosePosition = new Vector3(0f, -5f, 0f);
+        public static readonly Vector3 FloodElectricStairsPosition = new Vector3(-24f, -5f, 0f);
+        public static readonly Vector3 FloodCallPosePosition = new Vector3(-16f, -1.5f, 0f);
+        public static readonly Vector3 FloodHelpPosePosition = new Vector3(-16f, -1.5f, 0f);
+        public static readonly Vector3 FloodHelicopterStart = new Vector3(28f, 11f, 0f);
+        public static readonly Vector3 FloodHelicopterTarget = new Vector3(17f, 11f, 0f);
+        public static readonly Vector2 FloodDrowningPoseSize = new Vector2(13f, 7.2f);
+        public static readonly Vector2 FloodElectrocutedPoseSize = new Vector2(9f, 7.3f);
+        public static readonly Vector2 FloodCallingPoseSize = new Vector2(6.8f, 8f);
+        public static readonly Vector2 FloodHelpPoseSize = new Vector2(6.2f, 10.4f);
+        public static readonly Vector2 FloodHelicopterSize = new Vector2(8f, 7f);
+        public static readonly float FloodDamagePoseDuration = 2f;
+        public static readonly float FloodCallPauseDuration = 1.8f;
+        public static readonly float FloodHelicopterArrivalDuration = 3f;
+        public static readonly Vector2 FloodWaterSize = new Vector2(60f, 12f);
+        public static readonly Vector3 FloodWaterPosition = new Vector3(0f, -14f, 0f);
+        public static readonly float FloodRiseDuration = 2.5f;
+        public static readonly Color FloodWaterColor = new Color(.08f, .48f, .85f, .66f);
+        public static readonly int FloodBackgroundOrder = 0, FloodWaterOrder = 8;
+        public static readonly string FloodIntro = "It has been raining heavily for hours. You are home alone on the ground floor...";
+        public static readonly string FloodCallNumber = "112";
+        public static readonly string FloodQ1 = "FL_Q1", FloodQ2 = "FL_Q2", FloodQ3 = "FL_Q3";
+        public static readonly string FloodQ1Prompt = "FLASH FLOOD WARNING: Water levels are rising rapidly in your area. Move to higher ground now!";
+        public static readonly string FloodQ1A = "Move upstairs to higher ground now", FloodQ1B = "Stay on the ground floor and wait and see";
+        public static readonly string FloodQ1Safe = "Great decision! Moving to higher ground early keeps you away from rising water.";
+        public static readonly string FloodQ1Harm = "Floods rise faster than you expect. Don't wait. Move to higher ground at the first warning.";
+        public static readonly string FloodQ2Prompt = "The water below has reached the sockets. Lights flicker, and an appliance is still plugged in downstairs.";
+        public static readonly string FloodQ2A = "Wade down and unplug the TV before it's ruined", FloodQ2B = "Stay out of the water and keep away from electrical items";
+        public static readonly string FloodQ2Safe = "Smart! Stay away from the water and from anything electrical. Things can be replaced, people can't.";
+        public static readonly string FloodQ2Harm = "Water and electricity are a deadly mix. Never touch electrical items near or in floodwater.";
+        public static readonly string FloodQ3Prompt = "The street is now a fast river. Call 112 for emergency services. What will you do?";
+        public static readonly string FloodQ3A = "Drive out through the flooded road", FloodQ3B = "Wade through the water to reach the shelter", FloodQ3C = "Call Emergency Services (112) and wait on the rooftop";
+        public static readonly string FloodQ3Safe = "Correct! Stay on high ground, call for help, and wait for rescue. Turn around, don't drown.";
+        public static readonly string FloodQ3Drive = "Never drive through floodwater. About 30 cm of moving water can carry a car away.";
+        public static readonly string FloodQ3Walk = "Don't walk through floodwater. About 15 cm of moving water can knock an adult down, and it hides hazards.";
+        public static readonly string FloodSummaryAllSafe = "Excellent flood safety. Move to high ground early, avoid electricity and floodwater, and call for help.";
+        public static readonly string FloodSummaryPartial = "You reached safety. Review how quickly floodwater rises and the hazards it can hide.";
+        public static readonly string FloodSummaryHazard = "Floodwater is dangerous. Move to high ground, avoid electrical items and roads, and call for rescue.";
+        public static readonly string FloodKeyPrinciples = "• Move to higher ground at the first warning.\n• Keep away from floodwater and electricity.\n• Never drive or walk through moving floodwater.\n• Call emergency services and wait for rescue.";
+        public static string FloodPath(string name) => "Sprites/Flood/" + name;
         #endregion
 
         #region Unity Lifecycle

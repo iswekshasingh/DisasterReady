@@ -214,7 +214,7 @@ namespace DisasterSurvival.UI
             int score = response != null ? response.score : 0;
             int safeCount = decisionWasSafe != null && decisionWasSafe.Count > 0 ? CountSafe(decisionWasSafe) : (response != null && response.passed ? 3 : Mathf.Clamp(Mathf.RoundToInt(score / 100f * 3f), 0, 3));
             ShowBoard(safeCount, 3, simDef, decisionWasSafe, response != null && response.passed ? "SIMULATION PASSED" : "KEEP PRACTISING",
-                response != null ? response.aiFeedback : null);
+                response != null ? response.feedback : null);
             AudioManager audio = GameLayoutManager.Get<AudioManager>();
             if (audio != null) audio.PlaySound(response != null && response.passed ? GameLayoutManager.PathAudioSuccess : GameLayoutManager.PathAudioFail);
         }
@@ -322,11 +322,11 @@ namespace DisasterSurvival.UI
         {
             _leaderboardPanel.SetActive(true);
             if (entries == null || entries.Count == 0) { _leaderboardListText.text = "No records found on leaderboard yet."; return; }
-            StringBuilder sb = new StringBuilder("RANK      AGENT                  SCORE      POINTS\n--------------------------------------------------\n");
+            StringBuilder sb = new StringBuilder("RANK      AGENT                  TOTAL POINTS\n---------------------------------------------\n");
             for (int i = 0; i < entries.Count; i++)
             {
                 LeaderboardEntry entry = entries[i];
-                sb.AppendLine($"{i + 1,-8}  {(entry.username ?? "Anonymous"),-20}  {entry.score,-4}%      {entry.points} pts");
+                sb.AppendLine($"{i + 1,-8}  {(entry.username ?? "Anonymous"),-20}  {entry.totalPoints} pts");
             }
             _leaderboardListText.text = sb.ToString();
         }

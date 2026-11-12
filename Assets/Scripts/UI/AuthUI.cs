@@ -15,6 +15,7 @@ namespace DisasterSurvival.UI
     {
         private Text _titleText;
         private InputField _usernameInput;
+        private InputField _emailInput;
         private InputField _passwordInput;
         private Button _btnSubmit;
         private Text _btnSubmitText;
@@ -90,10 +91,14 @@ namespace DisasterSurvival.UI
             errRt.sizeDelta = new Vector2(650f, 40f);
 
             // Username Field
-            _usernameInput = CreateInputField(panel, "UsernameInput", GameLayoutManager.TextAuthUsernamePlaceholder, new Vector2(0f, 100f), false);
+           _usernameInput = CreateInputField(panel, "UsernameInput", GameLayoutManager.TextAuthUsernamePlaceholder, new Vector2(0f, 120f), false);
+
+            // Email Field
+            _emailInput = CreateInputField(panel, "EmailInput", "Enter your email", new Vector2(0f, 40f), false);
+            _emailInput.gameObject.SetActive(false);
 
             // Password Field
-            _passwordInput = CreateInputField(panel, "PasswordInput", GameLayoutManager.TextAuthPasswordPlaceholder, new Vector2(0f, 20f), true);
+           _passwordInput = CreateInputField(panel, "PasswordInput", GameLayoutManager.TextAuthPasswordPlaceholder, new Vector2(0f, -40f), true);
 
             // Submit Button (Sign In / Register)
             _btnSubmit = UIHelper.CreateStyledButton(
@@ -208,6 +213,7 @@ namespace DisasterSurvival.UI
         private void ToggleMode()
         {
             _isRegisterMode = !_isRegisterMode;
+            _emailInput.gameObject.SetActive(_isRegisterMode);
             _errorText.text = "";
 
             if (_isRegisterMode)
@@ -231,7 +237,13 @@ namespace DisasterSurvival.UI
 
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
-                _errorText.text = "Please enter both username and password.";
+                _errorText.text = "Please enter username and password.";
+                return;
+            }
+
+            if (_isRegisterMode && string.IsNullOrEmpty(_emailInput.text.Trim()))
+            {
+                _errorText.text = "Please enter your email.";
                 return;
             }
 
@@ -248,12 +260,19 @@ namespace DisasterSurvival.UI
 
             if (_isRegisterMode)
             {
-                RegisterRequest req = new RegisterRequest { username = username, password = password };
+                string email = _emailInput.text.Trim();
+
+                RegisterRequest req = new RegisterRequest
+                {
+                    username = username,
+                    email = email,
+                    password = password
+                };
                 api.Register(req, OnAuthResponse, OnAuthFailed);
             }
             else
             {
-                LoginRequest req = new LoginRequest { username = username, password = password };
+                LoginRequest req = new LoginRequest { email = username, password = password };
                 api.Login(req, OnAuthResponse, OnAuthFailed);
             }
         }

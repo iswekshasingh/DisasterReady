@@ -56,6 +56,49 @@ namespace DisasterSurvival.Backend
             PlayerPrefs.DeleteKey(PrefKeyUsername);
             PlayerPrefs.Save();
         }
+
+        [Serializable]
+        private class WebSessionData
+        {
+            public string token;
+            public string username;
+            public string baseUrl;
+        }
+
+        /// <summary>
+        /// Invoked from React Web portal via unityInstance.SendMessage("[Managers]", "SetWebSession", json)
+        /// Passes the authenticated user session directly in memory without exposing JWT in URLs.
+        /// </summary>
+        public void SetWebSession(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return;
+
+            try
+            {
+                WebSessionData data = JsonUtility.FromJson<WebSessionData>(json);
+                if (data != null && !string.IsNullOrEmpty(data.token))
+                {
+                    if (!string.IsNullOrEmpty(data.baseUrl))
+                    {
+                        GameLayoutManager.baseUrl = data.baseUrl;
+                    }
+
+                    SaveSession(data.token, data.username);
+                    Debug.Log($"[AuthManager] Web session received for user: {data.username}");
+
+                    GameManager gm = GameLayoutManager.Get<GameManager>();
+                    if (gm != null)
+                    {
+                        // In web mode, jump straight into the StarterScreen
+                        gm.TransitionToState(GameState.StarterScreen);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[AuthManager] Error parsing WebSession: {ex.Message}");
+            }
+        }
     }
 }
 

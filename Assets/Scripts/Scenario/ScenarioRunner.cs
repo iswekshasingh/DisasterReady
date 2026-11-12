@@ -19,6 +19,7 @@ namespace DisasterSurvival.Scenario
     public class ScenarioRunner : MonoBehaviour
     {
         private const string PrefsHighestUnlockedKey = "DISASTER_HIGHEST_UNLOCKED_SIM";
+        private const string EarthquakeBackendId = "60717a20-e54e-4b95-9253-c9b132a1374e";
 
         private int _currentSimIndex = 0;
         private SimulationDefinition _currentDefinition;
@@ -30,6 +31,11 @@ namespace DisasterSurvival.Scenario
         private float _simulationStartTime = 0f;
         private string _activeScenarioBackendId = "";
         private bool _isOfflineFallbackMode = false;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void NotifyAttemptSubmittedToWeb(string responseJson);
+#endif
 
         public int CurrentSimulationIndex => _currentSimIndex;
         public SimulationDefinition CurrentDefinition => _currentDefinition;
@@ -44,6 +50,12 @@ namespace DisasterSurvival.Scenario
             if (_currentEnvironment != null)
             {
                 _currentEnvironment.Teardown();
+
+                if (_currentEnvironment is MonoBehaviour mb && mb != null)
+                {
+                    Destroy(mb.gameObject);
+                }
+
                 _currentEnvironment = null;
             }
             GameLayoutManager.Unregister<ScenarioRunner>();
@@ -64,7 +76,18 @@ namespace DisasterSurvival.Scenario
             StopAllCoroutines();
             _currentSimIndex = index;
             _currentDefinition = SimulationRegistry.GetSimulation(_currentSimIndex);
-            _activeScenarioBackendId = _currentDefinition.SimulationKey;
+
+            if (_currentDefinition == null)
+            {
+                Debug.LogError($"[ScenarioRunner] Simulation not found: {index}");
+                return;
+            }
+
+            _activeScenarioBackendId = _currentSimIndex == 0 ? EarthquakeBackendId : "";
+            if (string.IsNullOrEmpty(_activeScenarioBackendId))
+            {
+                _isOfflineFallbackMode = true;
+            }
 
             // Track highest unlocked simulation progression in PlayerPrefs
             // TODO: Replace with backend user progress sync when user profile endpoint is connected
@@ -283,6 +306,18 @@ namespace DisasterSurvival.Scenario
                 {
                     if (spinner != null) spinner.Hide();
                     ResultUI resultUI = GameLayoutManager.Get<ResultUI>();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    try
+                    {
+                        NotifyAttemptSubmittedToWeb(JsonUtility.ToJson(response));
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[ScenarioRunner] WebGL event notification failed: {ex.Message}");
+                    }
+#endif
+
                     if (resultUI != null)
                     {
                         resultUI.ShowBackendResults(

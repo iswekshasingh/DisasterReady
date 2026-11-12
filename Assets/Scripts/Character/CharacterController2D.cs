@@ -112,7 +112,10 @@ namespace DisasterSurvival.Character
             if (_renderer != null) _renderer.color = Color.white;
             transform.position = GameLayoutManager.CharacterStartPosition;
             SetState(CharacterState.Idle);
-            StartIdleBob();
+            if (gameObject.activeInHierarchy)
+            {
+                StartIdleBob();
+            }
         }
 
         public void SetState(CharacterState newState)
@@ -251,12 +254,16 @@ namespace DisasterSurvival.Character
 
         public void WalkToTable(Action onComplete = null)
         {
+            if (!gameObject.activeInHierarchy)
+                gameObject.SetActive(true);
+
             StopIdleBob();
             SetState(CharacterState.Moving);
 
             if (_movementCoroutine != null)
             {
                 StopCoroutine(_movementCoroutine);
+                _movementCoroutine = null;
             }
 
             Vector3 startPos = new Vector3(transform.position.x, GameLayoutManager.CharacterStartPosition.y, transform.position.z);
@@ -277,12 +284,16 @@ namespace DisasterSurvival.Character
 
         public void RunTowardDoor(Action onInterrupted = null, Action onComplete = null)
         {
+            if (!gameObject.activeInHierarchy)
+                gameObject.SetActive(true);
+
             StopIdleBob();
             SetState(CharacterState.Moving);
 
             if (_movementCoroutine != null)
             {
                 StopCoroutine(_movementCoroutine);
+                _movementCoroutine = null;
             }
 
             Vector3 startPos = new Vector3(transform.position.x, GameLayoutManager.CharacterStartPosition.y, transform.position.z);
@@ -338,9 +349,13 @@ namespace DisasterSurvival.Character
 
         private void StartIdleBob()
         {
+            if (!gameObject.activeInHierarchy)
+                return;
+
             if (_idleBobCoroutine != null)
             {
                 StopCoroutine(_idleBobCoroutine);
+                _idleBobCoroutine = null;
             }
             _idleBobCoroutine = StartCoroutine(IdleBobRoutine());
         }

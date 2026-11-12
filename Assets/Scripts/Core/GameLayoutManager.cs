@@ -56,12 +56,12 @@ namespace DisasterSurvival.Core
         #region Backend Flags & Settings
         [Header("Backend Integration Settings")]
         [Tooltip("When true, authenticates and fetches scenarios/submits attempts to the backend API. When false, runs completely offline.")]
-        [SerializeField] private bool _useBackend = false;
+        [SerializeField] private bool _useBackend = true;
 
         [Tooltip("The base URL of the Node.js/Express API server.")]
         [SerializeField] private string _baseUrl = "http://localhost:4000";
 
-        public static bool useBackend = false;
+        public static bool useBackend = true;
         public static string baseUrl = "http://localhost:4000";
         #endregion
 

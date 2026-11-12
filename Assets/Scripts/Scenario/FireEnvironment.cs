@@ -386,6 +386,10 @@ namespace DisasterSurvival.Scenario
 
         public void Teardown()
         {
+            // Teardown can be called once by ScenarioRunner and again by OnDestroy.
+            // A repeated call must not stop the loop belonging to a newly started sim.
+            if (_environmentRoot == null) return;
+
             AudioManager audio = GameLayoutManager.Get<AudioManager>();
             if (audio != null) audio.StopLoop();
 

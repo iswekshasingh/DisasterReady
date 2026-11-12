@@ -18,6 +18,9 @@ namespace DisasterSurvival.Editor
                 if (importer != null)
                 {
                     importer.textureType = TextureImporterType.Sprite;
+                    // Runtime character poses need the complete image; alpha auto-slicing can
+                    // split a person and their speech bubble into separate sub-sprites.
+                    importer.spriteImportMode = SpriteImportMode.Single;
                     importer.spritePixelsPerUnit = GameLayoutManager.PixelsPerUnit;
                     importer.filterMode = FilterMode.Point;
                     importer.textureCompression = TextureImporterCompression.Uncompressed;

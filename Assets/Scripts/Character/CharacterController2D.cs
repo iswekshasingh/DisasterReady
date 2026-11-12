@@ -266,8 +266,11 @@ namespace DisasterSurvival.Character
 
             _movementCoroutine = StartCoroutine(MoveRoutine(startPos, walkTargetPos, duration, () =>
             {
-                transform.position = GameLayoutManager.CharacterHidePosition;
                 SetState(CharacterState.Hiding);
+                // SetState preserves the current feet position when changing sprite
+                // height. Snap to the calibrated under-table center afterward so
+                // that height compensation doesn't push the hiding pose below floor.
+                transform.position = GameLayoutManager.CharacterHidePosition;
                 onComplete?.Invoke();
             }));
         }

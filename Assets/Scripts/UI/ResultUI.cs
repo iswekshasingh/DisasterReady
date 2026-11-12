@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using DisasterSurvival.Core;
@@ -9,36 +10,32 @@ using DisasterSurvival.Scenario;
 
 namespace DisasterSurvival.UI
 {
-    /// <summary>
-    /// Displays outcome results for both offline mode and backend-connected mode.
-    /// Handles scores, educational recaps, AI feedback, retry on failure, leaderboard modal,
-    /// and dynamic progression to the next simulation.
-    /// </summary>
+    /// <summary>Shared simulation results board used for offline and backend results.</summary>
     public class ResultUI : MonoBehaviour
     {
+        private static readonly Color Ink = new Color(0.25f, 0.12f, 0.11f, 1f);
+        private static readonly Color Paper = new Color(0.91f, 0.77f, 0.60f, 1f);
+        private static readonly Color Green = new Color(0.24f, 0.67f, 0.34f, 1f);
+        private static readonly Color Gold = new Color(1f, 0.72f, 0.12f, 1f);
+        private static readonly Color Muted = new Color(0.43f, 0.38f, 0.38f, 1f);
+
         private Text _titleText;
         private Text _subtitleText;
         private Text _scoreText;
-        private Text _summaryText;
-
-        private GameObject _offlineButtonGroup;
-        private GameObject _backendButtonGroup;
-        private Button _btnRetry;
-
-        private Button _btnNextSim;
-        private Text _btnNextSimText;
-        private Button _btnBackendNextSim;
-        private Text _btnBackendNextSimText;
-
-        // Leaderboard sub-panel
+        private Text _statusText;
+        private Text _continueLabel;
+        private Text[] _stars = new Text[3];
+        private GameObject _mainContent;
+        private GameObject _checkpointRows;
+        private GameObject _learningRows;
         private GameObject _leaderboardPanel;
         private Text _leaderboardListText;
-
-        private Image _dimBg;
+        private Button _btnRetry;
         private Action _onReplayClicked;
         private Action _onNextSimClicked;
         private Action _onRetryClicked;
         private Action _onOpenLeaderboard;
+        private Image _dimBg;
 
         private void Awake()
         {
@@ -52,16 +49,10 @@ namespace DisasterSurvival.UI
             {
                 Debug.LogError($"[ResultUI] Build error: {ex}");
             }
-            finally
-            {
-                gameObject.SetActive(false);
-            }
+            finally { gameObject.SetActive(false); }
         }
 
-        private void OnDestroy()
-        {
-            GameLayoutManager.Unregister<ResultUI>();
-        }
+        private void OnDestroy() => GameLayoutManager.Unregister<ResultUI>();
 
         private void OnDisable()
         {
@@ -70,513 +61,280 @@ namespace DisasterSurvival.UI
 
         private void BuildUI()
         {
-            RectTransform rootRt = UIHelper.EnsureRectTransform(gameObject);
-            rootRt.anchorMin = Vector2.zero;
-            rootRt.anchorMax = Vector2.one;
-            rootRt.offsetMin = Vector2.zero;
-            rootRt.offsetMax = Vector2.zero;
+            RectTransform root = UIHelper.EnsureRectTransform(gameObject);
+            root.anchorMin = Vector2.zero;
+            root.anchorMax = Vector2.one;
+            root.offsetMin = Vector2.zero;
+            root.offsetMax = Vector2.zero;
 
-            // Dim backdrop
             _dimBg = gameObject.AddComponent<Image>();
             _dimBg.sprite = UIHelper.CreateWhiteSprite();
-            _dimBg.color = new Color(0.04f, 0.06f, 0.1f, 0.88f);
-            _dimBg.raycastTarget = false;
+            _dimBg.color = new Color(0.07f, 0.055f, 0.09f, 0.94f);
+            _dimBg.raycastTarget = true;
 
-            // Main result card
-            GameObject mainPanel = new GameObject("MainResultPanel");
-            mainPanel.transform.SetParent(transform, false);
-            Image cardBg = mainPanel.AddComponent<Image>();
-            cardBg.sprite = UIHelper.CreateWhiteSprite();
-            cardBg.color = new Color(0.1f, 0.14f, 0.2f, 0.98f);
+            GameObject card = MakePanel("ResultsBoard", Paper, new Vector2(1500f, 930f), Vector2.zero, transform);
+            _mainContent = card;
+            MakePanel("BoardInset", new Color(0.95f, 0.83f, 0.68f, 1f), new Vector2(1450f, 880f), Vector2.zero, card.transform);
+            // Bring inset behind the board content.
+            _mainContent.transform.GetChild(0).SetAsFirstSibling();
 
-            RectTransform cardRt = mainPanel.GetComponent<RectTransform>();
-            cardRt.sizeDelta = GameLayoutManager.ResultPanelSize;
-            cardRt.anchoredPosition = Vector2.zero;
+            Image border = card.GetComponent<Image>();
+            border.color = new Color(0.55f, 0.28f, 0.15f, 1f);
+            MakePanel("Paper", new Color(0.92f, 0.79f, 0.63f, 1f), new Vector2(1440f, 870f), Vector2.zero, card.transform);
+            card.transform.GetChild(1).SetAsFirstSibling();
 
-            // Title
-            GameObject titleObj = new GameObject("Title");
-            titleObj.transform.SetParent(mainPanel.transform, false);
-            _titleText = titleObj.AddComponent<Text>();
-            _titleText.font = UIHelper.GetDefaultFont();
-            _titleText.fontSize = 38;
-            _titleText.color = new Color(0.35f, 0.8f, 1f, 1f);
-            _titleText.alignment = TextAnchor.MiddleCenter;
-            RectTransform titleRt = titleObj.GetComponent<RectTransform>();
-            titleRt.anchorMin = new Vector2(0f, 1f);
-            titleRt.anchorMax = new Vector2(1f, 1f);
-            titleRt.pivot = new Vector2(0.5f, 1f);
-            titleRt.anchoredPosition = new Vector2(0f, -25f);
-            titleRt.sizeDelta = new Vector2(0f, 50f);
+            MakeText(card, "Title", GameLayoutManager.TextResultTitle, 42, new Color(1f, 0.93f, 0.83f), new Vector2(0, 374), new Vector2(1000, 74), new Color(0.28f, 0.65f, 0.36f));
+            _titleText = card.transform.Find("Title/Label")?.GetComponent<Text>();
+            _subtitleText = MakeText(card, "SimulationName", "SIMULATION", 32, Ink, new Vector2(0, 308), new Vector2(900, 55));
 
-            // Subtitle
-            GameObject subObj = new GameObject("Subtitle");
-            subObj.transform.SetParent(mainPanel.transform, false);
-            _subtitleText = subObj.AddComponent<Text>();
-            _subtitleText.font = UIHelper.GetDefaultFont();
-            _subtitleText.fontSize = 24;
-            _subtitleText.color = new Color(0.8f, 0.85f, 0.9f, 1f);
-            _subtitleText.alignment = TextAnchor.MiddleCenter;
-            RectTransform subRt = subObj.GetComponent<RectTransform>();
-            subRt.anchorMin = new Vector2(0f, 1f);
-            subRt.anchorMax = new Vector2(1f, 1f);
-            subRt.pivot = new Vector2(0.5f, 1f);
-            subRt.anchoredPosition = new Vector2(0f, -80f);
-            subRt.sizeDelta = new Vector2(0f, 40f);
+            for (int i = 0; i < 3; i++)
+                _stars[i] = MakeText(card, "Star" + i, "★", 90, Muted, new Vector2((i - 1) * 155f, 218), new Vector2(140, 110));
 
-            // Score display
-            GameObject scoreObj = new GameObject("Score");
-            scoreObj.transform.SetParent(mainPanel.transform, false);
-            _scoreText = scoreObj.AddComponent<Text>();
-            _scoreText.font = UIHelper.GetDefaultFont();
-            _scoreText.fontSize = 44;
-            _scoreText.color = new Color(0.2f, 0.95f, 0.45f, 1f);
-            _scoreText.alignment = TextAnchor.MiddleCenter;
-            RectTransform scoreRt = scoreObj.GetComponent<RectTransform>();
-            scoreRt.anchorMin = new Vector2(0f, 1f);
-            scoreRt.anchorMax = new Vector2(1f, 1f);
-            scoreRt.pivot = new Vector2(0.5f, 1f);
-            scoreRt.anchoredPosition = new Vector2(0f, -135f);
-            scoreRt.sizeDelta = new Vector2(0f, 60f);
+            _scoreText = MakeText(card, "Score", "0 / 3 SAFE DECISIONS", 42, Ink, new Vector2(0, 92), new Vector2(1000, 62));
+            _statusText = MakeText(card, "Status", "KEEP PRACTISING", 26, Ink, new Vector2(0, 39), new Vector2(400, 48), new Color(0.78f, 0.55f, 0.38f));
+            MakePanel("Divider", new Color(0.63f, 0.38f, 0.23f, 1f), new Vector2(1350, 3), new Vector2(0, -8), card.transform);
 
-            // Scrollable Content Area (Educational Summary / AI Feedback)
-            BuildScrollArea(mainPanel);
+            MakeText(card, "DecisionHeading", "YOUR DECISIONS", 28, new Color(0.46f, 0.24f, 0.15f), new Vector2(-390, -54), new Vector2(570, 48));
+            MakeText(card, "LearningHeading", "WHAT YOU LEARNED", 28, new Color(0.46f, 0.24f, 0.15f), new Vector2(390, -54), new Vector2(580, 48));
+            _checkpointRows = new GameObject("CheckpointRows");
+            _checkpointRows.transform.SetParent(card.transform, false);
+            RectTransform checkpointRt = UIHelper.EnsureRectTransform(_checkpointRows);
+            checkpointRt.anchorMin = checkpointRt.anchorMax = new Vector2(0.5f, 0.5f);
+            checkpointRt.anchoredPosition = new Vector2(-390, -74);
+            checkpointRt.sizeDelta = Vector2.zero;
+            _learningRows = new GameObject("LearningRows");
+            _learningRows.transform.SetParent(card.transform, false);
+            RectTransform learningRt = UIHelper.EnsureRectTransform(_learningRows);
+            learningRt.anchorMin = learningRt.anchorMax = new Vector2(0.5f, 0.5f);
+            learningRt.anchoredPosition = new Vector2(390, -74);
+            learningRt.sizeDelta = Vector2.zero;
 
-            // Offline Buttons
-            _offlineButtonGroup = new GameObject("OfflineButtons");
-            _offlineButtonGroup.transform.SetParent(mainPanel.transform, false);
-            RectTransform offRt = UIHelper.EnsureRectTransform(_offlineButtonGroup);
-            offRt.anchorMin = new Vector2(0f, 0f);
-            offRt.anchorMax = new Vector2(1f, 0f);
-            offRt.pivot = new Vector2(0.5f, 0f);
-            offRt.anchoredPosition = new Vector2(0f, 25f);
-            offRt.sizeDelta = new Vector2(0f, 90f);
+            Button replay = AddButton(card, "Replay", "REPLAY", new Vector2(-510, -390), new Vector2(360, 78), new Color(0.24f, 0.43f, 0.76f), () =>
+            {
+                PlayClickSound(); gameObject.SetActive(false); _onReplayClicked?.Invoke();
+            });
+            Button middle = AddButton(card, "Continue", "BACK TO START", new Vector2(0, -390), new Vector2(410, 78), Green, () =>
+            {
+                PlayClickSound(); gameObject.SetActive(false);
+                if (_onNextSimClicked != null) _onNextSimClicked.Invoke();
+                else ReturnToStarter();
+            });
+            _continueLabel = middle.GetComponentInChildren<Text>();
+            Button select = AddButton(card, "SelectSimulation", "SELECT SIM.", new Vector2(510, -390), new Vector2(360, 78), new Color(0.58f, 0.35f, 0.23f), () =>
+            {
+                PlayClickSound(); gameObject.SetActive(false); ReturnToStarter();
+            });
+            replay.gameObject.name = "BtnReplay";
+            middle.gameObject.name = "BtnContinue";
+            select.gameObject.name = "BtnSelectSimulation";
 
-            Button btnReplay = UIHelper.CreateStyledButton(
-                _offlineButtonGroup,
-                "BtnReplay",
-                GameLayoutManager.TextButtonReplay,
-                new Vector2(250f, 75f),
-                new Color(0.18f, 0.45f, 0.75f, 1f),
-                Color.white,
-                24,
-                () =>
-                {
-                    PlayClickSound();
-                    gameObject.SetActive(false);
-                    _onReplayClicked?.Invoke();
-                }
-            );
-            btnReplay.GetComponent<RectTransform>().anchoredPosition = new Vector2(-290f, 0f);
-
-            _btnNextSim = UIHelper.CreateStyledButton(
-                _offlineButtonGroup,
-                "BtnNextSim",
-                GameLayoutManager.TextButtonNextSimReady,
-                new Vector2(300f, 75f),
-                new Color(0.18f, 0.65f, 0.45f, 1f),
-                Color.white,
-                20,
-                () =>
-                {
-                    PlayClickSound();
-                    gameObject.SetActive(false);
-                    _onNextSimClicked?.Invoke();
-                }
-            );
-            _btnNextSimText = _btnNextSim.GetComponentInChildren<Text>();
-            _btnNextSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(20f, 0f);
-
-            Button btnSelectSim = UIHelper.CreateStyledButton(
-                _offlineButtonGroup,
-                "BtnSelectSim",
-                GameLayoutManager.TextSelectSimulation,
-                new Vector2(250f, 75f),
-                new Color(0.35f, 0.4f, 0.5f, 1f),
-                Color.white,
-                20,
-                () =>
-                {
-                    PlayClickSound();
-                    gameObject.SetActive(false);
-                    GameManager gm = GameLayoutManager.Get<GameManager>();
-                    if (gm != null)
-                    {
-                        gm.ReturnToStarterScreen();
-                    }
-                }
-            );
-            btnSelectSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(310f, 0f);
-
-            // Backend Buttons
-            _backendButtonGroup = new GameObject("BackendButtons");
-            _backendButtonGroup.transform.SetParent(mainPanel.transform, false);
-            RectTransform backRt = UIHelper.EnsureRectTransform(_backendButtonGroup);
-            backRt.anchorMin = new Vector2(0f, 0f);
-            backRt.anchorMax = new Vector2(1f, 0f);
-            backRt.pivot = new Vector2(0.5f, 0f);
-            backRt.anchoredPosition = new Vector2(0f, 25f);
-            backRt.sizeDelta = new Vector2(0f, 90f);
-
-            Button btnPlayAgain = UIHelper.CreateStyledButton(
-                _backendButtonGroup,
-                "BtnPlayAgain",
-                GameLayoutManager.TextButtonPlayAgain,
-                new Vector2(260f, 75f),
-                new Color(0.18f, 0.45f, 0.75f, 1f),
-                Color.white,
-                24,
-                () =>
-                {
-                    PlayClickSound();
-                    gameObject.SetActive(false);
-                    _onReplayClicked?.Invoke();
-                }
-            );
-            btnPlayAgain.GetComponent<RectTransform>().anchoredPosition = new Vector2(-280f, 0f);
-
-            _btnBackendNextSim = UIHelper.CreateStyledButton(
-                _backendButtonGroup,
-                "BtnBackendNextSim",
-                GameLayoutManager.TextButtonNextSimReady,
-                new Vector2(300f, 75f),
-                new Color(0.18f, 0.65f, 0.45f, 1f),
-                Color.white,
-                20,
-                () =>
-                {
-                    PlayClickSound();
-                    gameObject.SetActive(false);
-                    _onNextSimClicked?.Invoke();
-                }
-            );
-            _btnBackendNextSimText = _btnBackendNextSim.GetComponentInChildren<Text>();
-            _btnBackendNextSim.GetComponent<RectTransform>().anchoredPosition = new Vector2(20f, 0f);
-
-            Button btnLeaderboard = UIHelper.CreateStyledButton(
-                _backendButtonGroup,
-                "BtnLeaderboard",
-                GameLayoutManager.TextButtonLeaderboard,
-                new Vector2(260f, 75f),
-                new Color(0.2f, 0.6f, 0.4f, 1f),
-                Color.white,
-                22,
-                () =>
-                {
-                    PlayClickSound();
-                    _onOpenLeaderboard?.Invoke();
-                }
-            );
-            btnLeaderboard.GetComponent<RectTransform>().anchoredPosition = new Vector2(300f, 0f);
-
-            // Retry Button for network failures
-            _btnRetry = UIHelper.CreateStyledButton(
-                mainPanel,
-                "BtnRetry",
-                GameLayoutManager.TextButtonRetry,
-                new Vector2(300f, 75f),
-                new Color(0.85f, 0.3f, 0.2f, 1f),
-                Color.white,
-                26,
-                () => _onRetryClicked?.Invoke()
-            );
-            _btnRetry.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -220f);
+            _btnRetry = AddButton(card, "Retry", GameLayoutManager.TextButtonRetry, new Vector2(0, -390), new Vector2(360, 78), new Color(0.78f, 0.25f, 0.2f), () => _onRetryClicked?.Invoke());
             _btnRetry.gameObject.SetActive(false);
         }
 
-        private void BuildScrollArea(GameObject parent)
+        private GameObject MakePanel(string name, Color color, Vector2 size, Vector2 pos, Transform parent)
         {
-            GameObject scrollObj = new GameObject("ScrollArea");
-            scrollObj.transform.SetParent(parent.transform, false);
+            Image image = UIHelper.CreatePanel(parent.gameObject, name, color, size, pos);
+            image.raycastTarget = false;
+            return image.gameObject;
+        }
 
-            ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        private Text MakeText(GameObject parent, string name, string value, int size, Color color, Vector2 pos, Vector2 dimensions, Color? background = null)
+        {
+            GameObject holder = parent;
+            if (background.HasValue) holder = MakePanel(name, background.Value, dimensions, pos, parent.transform);
+            Text text = UIHelper.CreateText(holder, background.HasValue ? "Label" : name, value, size, color, TextAnchor.MiddleCenter);
+            RectTransform rt = text.GetComponent<RectTransform>();
+            if (background.HasValue)
+            {
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = pos;
+                rt.sizeDelta = dimensions;
+            }
+            text.fontStyle = FontStyle.Bold;
+            text.raycastTarget = false;
+            return text;
+        }
 
-            RectTransform scrollRt = scrollObj.GetComponent<RectTransform>();
-            scrollRt.anchorMin = new Vector2(0f, 0f);
-            scrollRt.anchorMax = new Vector2(1f, 1f);
-            scrollRt.offsetMin = new Vector2(50f, 120f);
-            scrollRt.offsetMax = new Vector2(-50f, -210f);
-
-            // Viewport with RectMask2D
-            GameObject viewport = new GameObject("Viewport");
-            viewport.transform.SetParent(scrollObj.transform, false);
-            viewport.AddComponent<RectMask2D>();
-            RectTransform viewRt = UIHelper.EnsureRectTransform(viewport);
-            viewRt.anchorMin = Vector2.zero;
-            viewRt.anchorMax = Vector2.one;
-            viewRt.offsetMin = Vector2.zero;
-            viewRt.offsetMax = Vector2.zero;
-            scrollRect.viewport = viewRt;
-
-            // Content
-            GameObject content = new GameObject("Content");
-            content.transform.SetParent(viewport.transform, false);
-            RectTransform contentRt = UIHelper.EnsureRectTransform(content);
-            contentRt.anchorMin = new Vector2(0f, 1f);
-            contentRt.anchorMax = new Vector2(1f, 1f);
-            contentRt.pivot = new Vector2(0.5f, 1f);
-            contentRt.anchoredPosition = Vector2.zero;
-            contentRt.sizeDelta = new Vector2(0f, 320f);
-            scrollRect.content = contentRt;
-
-            // Summary text
-            GameObject summaryObj = new GameObject("SummaryText");
-            summaryObj.transform.SetParent(content.transform, false);
-            _summaryText = summaryObj.AddComponent<Text>();
-            _summaryText.font = UIHelper.GetDefaultFont();
-            _summaryText.fontSize = 24;
-            _summaryText.color = new Color(0.9f, 0.95f, 1f, 1f);
-            _summaryText.alignment = TextAnchor.UpperLeft;
-            _summaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _summaryText.verticalOverflow = VerticalWrapMode.Overflow;
-
-            RectTransform sumRt = summaryObj.GetComponent<RectTransform>();
-            sumRt.anchorMin = Vector2.zero;
-            sumRt.anchorMax = Vector2.one;
-            sumRt.offsetMin = Vector2.zero;
-            sumRt.offsetMax = Vector2.zero;
+        private Button AddButton(GameObject parent, string name, string label, Vector2 pos, Vector2 size, Color color, Action action)
+        {
+            Button button = UIHelper.CreateStyledButton(parent, name, label, size, color, Color.white, 25, action);
+            RectTransform rt = button.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+            return button;
         }
 
         private void BuildLeaderboardPanel()
         {
-            _leaderboardPanel = new GameObject("LeaderboardModal");
-            _leaderboardPanel.transform.SetParent(transform, false);
-
-            Image panelBg = _leaderboardPanel.AddComponent<Image>();
-            panelBg.sprite = UIHelper.CreateWhiteSprite();
-            panelBg.color = new Color(0.08f, 0.12f, 0.18f, 0.98f);
-
-            RectTransform leadRt = _leaderboardPanel.GetComponent<RectTransform>();
-            leadRt.sizeDelta = new Vector2(900f, 700f);
-            leadRt.anchoredPosition = Vector2.zero;
-
-            // Leaderboard Title
-            Text leadTitle = UIHelper.CreateText(_leaderboardPanel, "LeadTitle", "AGENT LEADERBOARD", 34, new Color(0.35f, 0.85f, 1f, 1f));
-            RectTransform titleRt = leadTitle.GetComponent<RectTransform>();
-            titleRt.anchorMin = new Vector2(0f, 1f);
-            titleRt.anchorMax = new Vector2(1f, 1f);
-            titleRt.pivot = new Vector2(0.5f, 1f);
-            titleRt.anchoredPosition = new Vector2(0f, -25f);
-            titleRt.sizeDelta = new Vector2(0f, 50f);
-
-            // Leaderboard content text
-            GameObject listObj = new GameObject("ListText");
-            listObj.transform.SetParent(_leaderboardPanel.transform, false);
-            _leaderboardListText = listObj.AddComponent<Text>();
-            _leaderboardListText.font = UIHelper.GetDefaultFont();
-            _leaderboardListText.fontSize = 22;
-            _leaderboardListText.color = Color.white;
+            _leaderboardPanel = MakePanel("LeaderboardModal", new Color(0.12f, 0.1f, 0.16f, 0.98f), new Vector2(900, 700), Vector2.zero, transform);
+            _leaderboardListText = MakeText(_leaderboardPanel, "ListText", "", 22, Color.white, Vector2.zero, new Vector2(800, 500), null);
+            RectTransform rt = _leaderboardListText.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0, 20);
             _leaderboardListText.alignment = TextAnchor.UpperLeft;
-            _leaderboardListText.lineSpacing = 1.3f;
-
-            RectTransform listRt = listObj.GetComponent<RectTransform>();
-            listRt.anchorMin = new Vector2(0f, 0f);
-            listRt.anchorMax = new Vector2(1f, 1f);
-            listRt.offsetMin = new Vector2(50f, 110f);
-            listRt.offsetMax = new Vector2(-50f, -90f);
-
-            // Close button
-            Button btnClose = UIHelper.CreateStyledButton(
-                _leaderboardPanel,
-                "BtnCloseLeaderboard",
-                GameLayoutManager.TextButtonCloseLeaderboard,
-                new Vector2(240f, 65f),
-                new Color(0.4f, 0.45f, 0.55f, 1f),
-                Color.white,
-                24,
-                () => _leaderboardPanel.SetActive(false)
-            );
-            btnClose.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -280f);
-
+            Button close = AddButton(_leaderboardPanel, "Close", "CLOSE", new Vector2(0, -285), new Vector2(240, 65), new Color(0.4f, 0.45f, 0.55f), () => _leaderboardPanel.SetActive(false));
             _leaderboardPanel.SetActive(false);
         }
 
         public void ShowOfflineResults(int safeDecisions, int totalDecisions, Action onReplay)
         {
-            ShowOfflineResults(safeDecisions, totalDecisions, 0, null, onReplay, null);
+            ShowOfflineResults(safeDecisions, totalDecisions, 0, null, onReplay, null, null);
         }
 
-        public void ShowOfflineResults(int safeDecisions, int totalDecisions, int currentSimIndex, SimulationDefinition simDef, Action onReplay, Action onNextSim)
+        public void ShowOfflineResults(int safeDecisions, int totalDecisions, int currentSimIndex, SimulationDefinition simDef, Action onReplay, Action onNextSim, IList<bool> decisionWasSafe = null)
         {
-            if (_dimBg != null) _dimBg.raycastTarget = true;
             _onReplayClicked = onReplay;
-            _onNextSimClicked = onNextSim;
-            _offlineButtonGroup.SetActive(true);
-            _backendButtonGroup.SetActive(false);
-            _btnRetry.gameObject.SetActive(false);
-            _leaderboardPanel.SetActive(false);
-
-            _titleText.text = GameLayoutManager.TextResultTitle;
-            _subtitleText.text = simDef != null ? simDef.DisplayTitle.ToUpperInvariant() : GameLayoutManager.TextResultSubtitleOffline;
-            _scoreText.text = $"{safeDecisions} / {totalDecisions} Safe Decisions";
-
-            // Configure Next Simulation button
-            ConfigureNextSimButton(_btnNextSim, _btnNextSimText, currentSimIndex, onNextSim);
-
-            // Educational feedback
-            if (simDef != null)
-            {
-                if (safeDecisions == totalDecisions)
-                {
-                    _scoreText.color = new Color(0.2f, 0.95f, 0.45f, 1f);
-                    _summaryText.text = $"{simDef.EducationalSummaryAllSafe}\n\nKey Principles Learned:\n{simDef.KeyPrinciplesText}";
-                }
-                else if (safeDecisions > 0)
-                {
-                    _scoreText.color = new Color(1f, 0.8f, 0.2f, 1f);
-                    _summaryText.text = $"{simDef.EducationalSummaryPartial}\n\nImportant Points to Remember:\n{simDef.KeyPrinciplesText}";
-                }
-                else
-                {
-                    _scoreText.color = new Color(0.95f, 0.3f, 0.25f, 1f);
-                    _summaryText.text = $"{simDef.EducationalSummaryHazard}\n\nCritical Takeaways:\n{simDef.KeyPrinciplesText}";
-                }
-            }
-            else
-            {
-                if (safeDecisions == totalDecisions)
-                {
-                    _scoreText.color = new Color(0.2f, 0.95f, 0.45f, 1f);
-                    _summaryText.text = GameLayoutManager.TextSummaryAllSafe;
-                }
-                else if (safeDecisions > 0)
-                {
-                    _scoreText.color = new Color(1f, 0.8f, 0.2f, 1f);
-                    _summaryText.text = GameLayoutManager.TextSummaryPartial;
-                }
-                else
-                {
-                    _scoreText.color = new Color(0.95f, 0.3f, 0.25f, 1f);
-                    _summaryText.text = GameLayoutManager.TextSummaryHazard;
-                }
-            }
-
-            gameObject.SetActive(true);
-
+            _onNextSimClicked = SimulationRegistry.HasNext(currentSimIndex) ? onNextSim : null;
+            if (_continueLabel != null) _continueLabel.text = _onNextSimClicked != null ? "NEXT SIM" : "BACK TO START";
+            ShowBoard(safeDecisions, totalDecisions, simDef, decisionWasSafe,
+                safeDecisions == totalDecisions ? ReadyLabel(simDef) : safeDecisions > 0 ? "KEEP PRACTISING" : "REVIEW SAFETY", null);
             AudioManager audio = GameLayoutManager.Get<AudioManager>();
-            if (audio != null)
-            {
-                audio.PlaySound(safeDecisions > 0 ? GameLayoutManager.PathAudioSuccess : GameLayoutManager.PathAudioFail);
-            }
+            if (audio != null) audio.PlaySound(safeDecisions > 0 ? GameLayoutManager.PathAudioSuccess : GameLayoutManager.PathAudioFail);
         }
 
         public void ShowBackendResults(AttemptResultResponse response, Action onPlayAgain, Action onOpenLeaderboard)
         {
-            ShowBackendResults(response, 0, null, onPlayAgain, null, onOpenLeaderboard);
+            ShowBackendResults(response, 0, null, onPlayAgain, null, onOpenLeaderboard, null);
         }
 
-        public void ShowBackendResults(AttemptResultResponse response, int currentSimIndex, SimulationDefinition simDef, Action onPlayAgain, Action onNextSim, Action onOpenLeaderboard)
+        public void ShowBackendResults(AttemptResultResponse response, int currentSimIndex, SimulationDefinition simDef, Action onPlayAgain, Action onNextSim, Action onOpenLeaderboard, IList<bool> decisionWasSafe = null)
         {
-            if (_dimBg != null) _dimBg.raycastTarget = true;
             _onReplayClicked = onPlayAgain;
-            _onNextSimClicked = onNextSim;
+            _onNextSimClicked = SimulationRegistry.HasNext(currentSimIndex) ? onNextSim : null;
+            if (_continueLabel != null) _continueLabel.text = _onNextSimClicked != null ? "NEXT SIM" : "BACK TO START";
             _onOpenLeaderboard = onOpenLeaderboard;
-            _offlineButtonGroup.SetActive(false);
-            _backendButtonGroup.SetActive(true);
+            int score = response != null ? response.score : 0;
+            int safeCount = decisionWasSafe != null && decisionWasSafe.Count > 0 ? CountSafe(decisionWasSafe) : (response != null && response.passed ? 3 : Mathf.Clamp(Mathf.RoundToInt(score / 100f * 3f), 0, 3));
+            ShowBoard(safeCount, 3, simDef, decisionWasSafe, response != null && response.passed ? "SIMULATION PASSED" : "KEEP PRACTISING",
+                response != null ? response.aiFeedback : null);
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null) audio.PlaySound(response != null && response.passed ? GameLayoutManager.PathAudioSuccess : GameLayoutManager.PathAudioFail);
+        }
+
+        private void ShowBoard(int safeCount, int decisionCount, SimulationDefinition simDef, IList<bool> decisions, string status, string feedback)
+        {
+            _dimBg.raycastTarget = true;
+            _mainContent.SetActive(true);
             _btnRetry.gameObject.SetActive(false);
             _leaderboardPanel.SetActive(false);
-
             _titleText.text = GameLayoutManager.TextResultTitle;
-            bool passed = response != null && response.passed;
-            _subtitleText.text = passed ? "EVALUATION: PASSED" : "EVALUATION: NEEDS REVIEW";
-            _subtitleText.color = passed ? new Color(0.3f, 0.9f, 0.4f, 1f) : new Color(0.95f, 0.4f, 0.3f, 1f);
-
-            int score = response != null ? response.score : 0;
-            int points = response != null ? response.points : 0;
-            _scoreText.text = $"Score: {score}%   (+{points} Points)";
-            _scoreText.color = passed ? new Color(0.2f, 0.95f, 0.45f, 1f) : new Color(1f, 0.75f, 0.2f, 1f);
-
-            // Configure Next Simulation button in backend mode
-            ConfigureNextSimButton(_btnBackendNextSim, _btnBackendNextSimText, currentSimIndex, onNextSim);
-
-            string feedback = (response != null && !string.IsNullOrEmpty(response.aiFeedback))
-                ? response.aiFeedback
-                : "Your disaster mitigation decisions have been recorded and scored.";
-            _summaryText.text = "AI FEEDBACK:\n\n" + feedback;
-
-            gameObject.SetActive(true);
-
-            AudioManager audio = GameLayoutManager.Get<AudioManager>();
-            if (audio != null)
+            _subtitleText.text = simDef != null ? simDef.DisplayTitle.ToUpperInvariant() : GameLayoutManager.TextResultSubtitleOffline;
+            int stars = Mathf.Clamp(safeCount, 0, 3);
+            for (int i = 0; i < _stars.Length; i++)
             {
-                audio.PlaySound(passed ? GameLayoutManager.PathAudioSuccess : GameLayoutManager.PathAudioFail);
+                _stars[i].color = i < stars ? Gold : Muted;
+                _stars[i].text = "★";
+            }
+            _scoreText.text = $"{safeCount} / {Mathf.Max(1, decisionCount)} SAFE DECISIONS";
+            _scoreText.color = stars == 3 ? Green : stars == 0 ? new Color(0.75f, 0.27f, 0.22f) : new Color(0.72f, 0.39f, 0.14f);
+            _statusText.text = status;
+            _statusText.color = Ink;
+            FillResultRows(simDef, decisions, decisionCount, feedback);
+            gameObject.SetActive(true);
+        }
+
+        private void FillResultRows(SimulationDefinition simDef, IList<bool> decisions, int decisionCount, string feedback)
+        {
+            ClearChildren(_checkpointRows.transform);
+            ClearChildren(_learningRows.transform);
+            int rowCount = Mathf.Min(3, Mathf.Max(decisionCount, simDef != null && simDef.ResultCheckpointLabels != null ? simDef.ResultCheckpointLabels.Count : 0));
+            rowCount = Mathf.Max(1, rowCount);
+            for (int i = 0; i < rowCount; i++)
+            {
+                string label = simDef != null && simDef.ResultCheckpointLabels != null && i < simDef.ResultCheckpointLabels.Count
+                    ? simDef.ResultCheckpointLabels[i] : $"DECISION {i + 1}";
+                bool known = decisions != null && i < decisions.Count;
+                bool safe = known && decisions[i];
+                Color rowColor = safe ? new Color(0.86f, 0.82f, 0.63f) : new Color(0.91f, 0.72f, 0.64f);
+                GameObject row = MakePanel("Checkpoint" + i, rowColor, new Vector2(600, 65), new Vector2(0, -44 - i * 74), _checkpointRows.transform);
+                RectTransform rowRt = row.GetComponent<RectTransform>(); rowRt.anchorMin = rowRt.anchorMax = new Vector2(0.5f, 0.5f);
+                MakeText(row, "Mark", known ? (safe ? "✓" : "×") : "•", 32, known ? (safe ? Green : new Color(0.78f, 0.2f, 0.18f)) : Muted, new Vector2(-266, 0), new Vector2(55, 55), new Color(0.92f, 0.86f, 0.72f));
+                Text rowText = MakeText(row, "CheckpointLabel", label, 24, Ink, new Vector2(20, 0), new Vector2(465, 58));
+                rowText.alignment = TextAnchor.MiddleLeft;
+                MakeText(row, "CheckpointNumber", (i + 1).ToString(), 20, new Color(0.55f, 0.32f, 0.19f), new Vector2(280, 0), new Vector2(30, 55));
+            }
+
+            List<string> lessons = simDef != null ? simDef.ResultLearningLabels : null;
+            if (lessons == null || lessons.Count == 0) lessons = new List<string> { "Follow the safest route", "Avoid immediate hazards", "Call for help and wait for rescue" };
+            int lessonsToShow = Mathf.Min(3, lessons.Count);
+            for (int i = 0; i < lessonsToShow; i++)
+            {
+                MakeText(_learningRows, "LessonIcon" + i, (i + 1).ToString(), 25, i == 1 ? new Color(0.68f, 0.45f, 0.08f) : new Color(0.48f, 0.28f, 0.17f), new Vector2(-245, -44 - i * 74), new Vector2(60, 58), new Color(0.96f, 0.86f, 0.70f));
+                Text lesson = MakeText(_learningRows, "Lesson" + i, lessons[i], 23, Ink, new Vector2(25, -44 - i * 74), new Vector2(430, 62));
+                lesson.alignment = TextAnchor.MiddleLeft;
+            }
+            if (!string.IsNullOrWhiteSpace(feedback))
+            {
+                Text feedbackText = MakeText(_learningRows, "Feedback", feedback, 16, Muted, new Vector2(10, -270), new Vector2(500, 38));
+                feedbackText.alignment = TextAnchor.MiddleLeft;
             }
         }
 
-        private void ConfigureNextSimButton(Button button, Text label, int currentSimIndex, Action onNextSim)
+        private static int CountSafe(IList<bool> decisions)
         {
-            if (button == null) return;
+            int count = 0;
+            for (int i = 0; i < decisions.Count; i++) if (decisions[i]) count++;
+            return count;
+        }
 
-            bool hasNext = SimulationRegistry.HasNext(currentSimIndex);
-            button.interactable = (onNextSim != null);
+        private static string ReadyLabel(SimulationDefinition definition)
+        {
+            string title = definition != null ? definition.DisplayTitle ?? "" : "";
+            if (title.IndexOf("flood", StringComparison.OrdinalIgnoreCase) >= 0) return "FLOOD READY!";
+            if (title.IndexOf("fire", StringComparison.OrdinalIgnoreCase) >= 0) return "FIRE READY!";
+            if (title.IndexOf("earthquake", StringComparison.OrdinalIgnoreCase) >= 0) return "QUAKE READY!";
+            return "SAFETY READY!";
+        }
 
-            if (label != null)
-            {
-                if (hasNext)
-                {
-                    SimulationDefinition nextDef = SimulationRegistry.GetSimulation(currentSimIndex + 1);
-                    label.text = $"Next: {nextDef.DisplayTitle}";
-                }
-                else
-                {
-                    label.text = GameLayoutManager.TextButtonBackToStart;
-                }
-            }
+        private static void ClearChildren(Transform parent)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--) Destroy(parent.GetChild(i).gameObject);
+        }
+
+        private void ReturnToStarter()
+        {
+            GameManager gm = GameLayoutManager.Get<GameManager>();
+            if (gm != null) gm.ReturnToStarterScreen();
         }
 
         public void ShowNetworkFailure(string error, Action onRetry)
         {
-            if (_dimBg != null) _dimBg.raycastTarget = true;
-            _onRetryClicked = onRetry;
-            _offlineButtonGroup.SetActive(false);
-            _backendButtonGroup.SetActive(false);
+            _mainContent.SetActive(false);
             _btnRetry.gameObject.SetActive(true);
-
+            _onRetryClicked = onRetry;
             _titleText.text = "SUBMISSION FAILED";
             _subtitleText.text = "Communication Error";
             _scoreText.text = "";
-            _summaryText.text = $"{GameLayoutManager.TextNetworkErrorPrompt}\n\nDetails: {error}";
-
+            _statusText.text = $"{GameLayoutManager.TextNetworkErrorPrompt}\n{error}";
+            _mainContent.SetActive(true);
             gameObject.SetActive(true);
         }
 
         public void DisplayLeaderboard(List<LeaderboardEntry> entries)
         {
             _leaderboardPanel.SetActive(true);
-
-            if (entries == null || entries.Count == 0)
-            {
-                _leaderboardListText.text = "No records found on leaderboard yet.";
-                return;
-            }
-
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendLine("RANK      AGENT                  SCORE      POINTS");
-            sb.AppendLine("--------------------------------------------------");
-
+            if (entries == null || entries.Count == 0) { _leaderboardListText.text = "No records found on leaderboard yet."; return; }
+            StringBuilder sb = new StringBuilder("RANK      AGENT                  SCORE      POINTS\n--------------------------------------------------\n");
             for (int i = 0; i < entries.Count; i++)
             {
                 LeaderboardEntry entry = entries[i];
-                string rank = (i + 1).ToString().PadRight(8);
-                string username = (entry.username ?? "Anonymous").PadRight(20);
-                string score = $"{entry.score}%".PadRight(10);
-                string pts = $"{entry.points} pts";
-
-                sb.AppendLine($"{rank}  {username}  {score}  {pts}");
+                sb.AppendLine($"{i + 1,-8}  {(entry.username ?? "Anonymous"),-20}  {entry.score,-4}%      {entry.points} pts");
             }
-
             _leaderboardListText.text = sb.ToString();
         }
 
         private void PlayClickSound()
         {
             AudioManager audio = GameLayoutManager.Get<AudioManager>();
-            if (audio != null)
-            {
-                audio.PlaySound(GameLayoutManager.PathAudioClick);
-            }
+            if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioClick);
         }
     }
 }

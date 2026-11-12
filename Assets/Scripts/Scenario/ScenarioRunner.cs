@@ -25,6 +25,7 @@ namespace DisasterSurvival.Scenario
         private ISimulationEnvironment _currentEnvironment;
 
         private readonly List<AnswerSubmission> _recordedAnswers = new List<AnswerSubmission>();
+        private readonly List<bool> _decisionWasSafe = new List<bool>();
         private int _safeDecisionsCount = 0;
         private float _simulationStartTime = 0f;
         private string _activeScenarioBackendId = "";
@@ -131,6 +132,7 @@ namespace DisasterSurvival.Scenario
         private IEnumerator RunSimulationFlow()
         {
             _recordedAnswers.Clear();
+            _decisionWasSafe.Clear();
             _safeDecisionsCount = 0;
             _simulationStartTime = Time.time;
 
@@ -147,6 +149,14 @@ namespace DisasterSurvival.Scenario
 
             // 2. Build new environment for current simulation
             Transform worldRoot = GameObject.Find("[World]")?.transform;
+            // The starter screen intentionally hides the persistent character. Restore it
+            // before any environment starts movement coroutines on the character object.
+            CharacterController2D player = GameLayoutManager.Get<CharacterController2D>();
+            if (player != null)
+            {
+                player.gameObject.SetActive(true);
+                player.ResetToStart();
+            }
             _currentEnvironment = _currentDefinition.CreateEnvironment();
             if (_currentEnvironment != null)
             {
@@ -179,7 +189,13 @@ namespace DisasterSurvival.Scenario
                 string chosenOption = null;
                 if (decision != null)
                 {
+                    decision.gameObject.SetActive(true);
                     decision.ShowOptions(q.Options, opt => chosenOption = opt);
+                }
+                else
+                {
+                    Debug.LogError("[ScenarioRunner] DecisionUI is missing; cannot present simulation choices.");
+                    yield break;
                 }
 
                 while (chosenOption == null)
@@ -217,7 +233,9 @@ namespace DisasterSurvival.Scenario
             _recordedAnswers.Add(new AnswerSubmission(questionId, optionId));
 
             OutcomeInfo outcome = _currentDefinition.GetOutcome(questionId, optionId);
-            if (outcome != null && outcome.Outcome == OutcomeType.Safe)
+            bool safe = outcome != null && outcome.Outcome == OutcomeType.Safe;
+            _decisionWasSafe.Add(safe);
+            if (safe)
             {
                 _safeDecisionsCount++;
             }
@@ -234,7 +252,8 @@ namespace DisasterSurvival.Scenario
                     _currentSimIndex,
                     _currentDefinition,
                     onReplay: () => StartSimulationByIndex(_currentSimIndex),
-                    onNextSim: () => StartNextSimulation()
+                    onNextSim: () => StartNextSimulation(),
+                    decisionWasSafe: _decisionWasSafe
                 );
             }
         }
@@ -272,7 +291,8 @@ namespace DisasterSurvival.Scenario
                             _currentDefinition,
                             onPlayAgain: () => StartSimulationByIndex(_currentSimIndex),
                             onNextSim: () => StartNextSimulation(),
-                            onOpenLeaderboard: () => FetchAndShowLeaderboard()
+                            onOpenLeaderboard: () => FetchAndShowLeaderboard(),
+                            decisionWasSafe: _decisionWasSafe
                         );
                     }
                 },

@@ -25,6 +25,8 @@ namespace DisasterSurvival.Scenario
         public string EducationalSummaryPartial { get; set; }
         public string EducationalSummaryHazard { get; set; }
         public string KeyPrinciplesText { get; set; }
+        public List<string> ResultCheckpointLabels { get; set; } = new List<string>();
+        public List<string> ResultLearningLabels { get; set; } = new List<string>();
 
         // Environment factory
         public Func<ISimulationEnvironment> EnvironmentFactory { get; set; }

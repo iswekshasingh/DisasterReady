@@ -108,6 +108,8 @@ namespace DisasterSurvival.UI
 
         public void DisplayMessage(string message, BannerStyle style = BannerStyle.Standard, bool typewriter = true, Action onComplete = null)
         {
+            // The starter screen hides the banner; re-enable it before starting its typewriter coroutine.
+            if (!gameObject.activeSelf) gameObject.SetActive(true);
             SetStyle(style);
             _onTypewriterComplete = onComplete;
 

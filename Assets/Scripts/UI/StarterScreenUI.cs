@@ -19,6 +19,8 @@ namespace DisasterSurvival.UI
         private Action<int> _onSimulationSelected;
         private GameObject _cardsContainer;
         private readonly List<GameObject> _createdCards = new List<GameObject>();
+        private Sprite _mockupSprite;
+        private bool _useMockupArtwork;
 
         private void Awake()
         {
@@ -30,6 +32,11 @@ namespace DisasterSurvival.UI
         private void OnDestroy()
         {
             GameLayoutManager.Unregister<StarterScreenUI>();
+        }
+
+        private void OnDisable()
+        {
+            StopSelectionMusic();
         }
 
         private void BuildStaticLayout()
@@ -46,6 +53,34 @@ namespace DisasterSurvival.UI
             bg.color = GameLayoutManager.StarterBgColor;
             bg.raycastTarget = true;
 
+            // The supplied pixel-art mockup contains the complete title, cards, copy,
+            // and button art. Keep the visual as one full-screen image and place live
+            // button hit targets over its three START SIMULATION controls.
+            // Store the PNG as a .bytes TextAsset so Unity doesn't have to import it
+            // as a Sprite before the runtime UI can load it.
+            TextAsset mockupBytes = Resources.Load<TextAsset>("Sprites/starter_screen_mockup");
+            if (mockupBytes != null)
+            {
+                Texture2D mockupTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (mockupTexture.LoadImage(mockupBytes.bytes))
+                {
+                    mockupTexture.filterMode = FilterMode.Point;
+                    _mockupSprite = Sprite.Create(mockupTexture, new Rect(0, 0, mockupTexture.width, mockupTexture.height), new Vector2(0.5f, 0.5f));
+                    bg.sprite = _mockupSprite;
+                    bg.type = Image.Type.Simple;
+                    bg.preserveAspect = false;
+                    bg.color = Color.white;
+                    _useMockupArtwork = true;
+                    Debug.Log("[StarterScreenUI] Loaded the pixel-art simulation selection screen from its PNG data.");
+                }
+                else
+                {
+                    Destroy(mockupTexture);
+                    Debug.LogError("[StarterScreenUI] Could not decode Resources/Sprites/starter_screen_mockup.bytes. The simulation selection screen will use its fallback layout.");
+                }
+            }
+            else Debug.LogError("[StarterScreenUI] Could not load Resources/Sprites/starter_screen_mockup.bytes. The simulation selection screen will use its fallback layout.");
+
             // Title Container
             GameObject titleObj = new GameObject("HeaderContainer");
             titleObj.transform.SetParent(transform, false);
@@ -55,6 +90,7 @@ namespace DisasterSurvival.UI
             titleRt.pivot = new Vector2(0.5f, 1f);
             titleRt.anchoredPosition = new Vector2(0f, -80f);
             titleRt.sizeDelta = new Vector2(1600f, 160f);
+            titleObj.SetActive(!_useMockupArtwork);
 
             // Title Text
             Text title = UIHelper.CreateText(
@@ -96,6 +132,9 @@ namespace DisasterSurvival.UI
             _onSimulationSelected = onSelectSimulation;
             gameObject.SetActive(true);
 
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null) audio.PlayLoop(GameLayoutManager.PathAudioSimulationSelectionMusic, 0.45f);
+
             // Hide in-game HUD & Character while on Starter Screen
             BannerUI banner = GameLayoutManager.Get<BannerUI>();
             if (banner != null) banner.Hide();
@@ -118,7 +157,14 @@ namespace DisasterSurvival.UI
 
         public void Hide()
         {
+            StopSelectionMusic();
             gameObject.SetActive(false);
+        }
+
+        private void StopSelectionMusic()
+        {
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null) audio.StopLoop();
         }
 
         private void PopulateSimulationCards()
@@ -136,6 +182,16 @@ namespace DisasterSurvival.UI
             IReadOnlyList<SimulationDefinition> sims = SimulationRegistry.All;
             if (sims == null || sims.Count == 0) return;
 
+            if (_useMockupArtwork && sims.Count == 3)
+            {
+                // Anchors are normalized to the provided 16:9 artwork, so these remain
+                // aligned to the rendered button art at different screen resolutions.
+                CreateMockupLaunchTarget(0, new Vector2(0.13f, 0.272f), new Vector2(0.337f, 0.345f));
+                CreateMockupLaunchTarget(1, new Vector2(0.397f, 0.272f), new Vector2(0.601f, 0.345f));
+                CreateMockupLaunchTarget(2, new Vector2(0.658f, 0.272f), new Vector2(0.864f, 0.345f));
+                return;
+            }
+
             int count = sims.Count;
             Vector2 cardSize = GameLayoutManager.StarterCardSize;
             float spacing = GameLayoutManager.StarterCardSpacing;
@@ -152,6 +208,35 @@ namespace DisasterSurvival.UI
                 GameObject card = CreateCard(def, simIndex, cardPos, cardSize);
                 _createdCards.Add(card);
             }
+        }
+
+        private void CreateMockupLaunchTarget(int simulationIndex, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            GameObject target = new GameObject($"MockupLaunch_{simulationIndex + 1}");
+            target.transform.SetParent(transform, false);
+            RectTransform rect = UIHelper.EnsureRectTransform(target);
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image hitImage = target.AddComponent<Image>();
+            hitImage.sprite = UIHelper.CreateWhiteSprite();
+            hitImage.color = new Color(1f, 1f, 1f, 0f);
+            hitImage.raycastTarget = true;
+
+            Button button = target.AddComponent<Button>();
+            button.targetGraphic = hitImage;
+            button.transition = Selectable.Transition.ColorTint;
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(1f, 1f, 1f, 0f);
+            colors.highlightedColor = new Color(1f, 1f, 1f, 0.10f);
+            colors.pressedColor = new Color(1f, 1f, 1f, 0.2f);
+            colors.selectedColor = new Color(1f, 1f, 1f, 0.10f);
+            colors.disabledColor = new Color(1f, 1f, 1f, 0f);
+            button.colors = colors;
+            button.onClick.AddListener(() => OnCardClicked(simulationIndex));
+            _createdCards.Add(target);
         }
 
         private GameObject CreateCard(SimulationDefinition def, int index, Vector2 anchoredPos, Vector2 size)

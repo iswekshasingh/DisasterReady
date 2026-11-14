@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 export const Footer = () => {
   return (
-    <footer style={{
+    <footer className="site-footer" style={{
       backgroundColor: 'var(--bg-secondary)',
       borderTop: '1px solid var(--border-subtle)',
       padding: '2rem 0',
@@ -20,9 +20,9 @@ export const Footer = () => {
         color: 'var(--text-muted)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <ShieldAlert size={18} color="var(--accent-orange)" />
+          <ShieldAlert size={18} color="var(--accent-primary)" />
           <span style={{ fontWeight: 700, color: '#FFF' }}>
-            Disaster<span style={{ color: 'var(--accent-orange)' }}>Ready</span>
+            Disaster<span className="footer-brand-accent" style={{ color: 'var(--accent-primary)' }}>Ready</span>
           </span>
           <span>— Companion Web Portal</span>
         </div>

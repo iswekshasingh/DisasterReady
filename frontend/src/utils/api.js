@@ -2,7 +2,9 @@ import axios from 'axios';
 import { storage } from './storage';
 
 // API Base URL from Vite environment variable with safe fallback
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+// Use same-origin in deployed builds (configure a reverse proxy there), while
+// allowing Vite's development proxy to reach the local Express API.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

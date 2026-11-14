@@ -15,21 +15,21 @@ export const LandingPage = () => {
       textAlign: 'center',
       padding: '3rem 1.5rem'
     }}>
-      <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+      <div className="landing-hero" style={{ maxWidth: '640px', margin: '0 auto' }}>
         {/* Brand Icon */}
         <div style={{
           width: '4rem',
           height: '4rem',
           borderRadius: 'var(--radius-lg)',
-          backgroundColor: 'var(--accent-orange-subtle)',
-          border: '1px solid rgba(255, 107, 53, 0.4)',
+          backgroundColor: 'var(--accent-primary-soft)',
+          border: '1px solid rgba(139, 124, 255, 0.4)',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: '1.75rem',
-          boxShadow: '0 0 25px rgba(255, 107, 53, 0.25)'
+          boxShadow: '0 0 25px rgba(109, 91, 255, 0.22)'
         }}>
-          <ShieldAlert size={36} color="var(--accent-orange)" />
+          <ShieldAlert size={36} color="var(--accent-primary)" />
         </div>
 
         {/* Title */}
@@ -41,7 +41,7 @@ export const LandingPage = () => {
           marginBottom: '1.25rem',
           color: '#FFFFFF'
         }}>
-          Disaster<span style={{ color: 'var(--accent-orange)' }}>Ready</span>
+          Disaster<span style={{ color: 'var(--accent-primary)' }}>Ready</span>
         </h1>
 
         {/* Short Project Introduction */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GlassCard } from '../components/GlassCard';
 import {
   ShieldAlert,
   User,
@@ -103,12 +104,12 @@ export const SignupPage = () => {
   };
 
   return (
-    <div className="container" style={{
+    <div className="container auth-page" style={{
       maxWidth: '480px',
       paddingTop: '2rem',
       paddingBottom: '3rem'
     }}>
-      <div className="card" style={{
+      <GlassCard className="card auth-card" style={{
         backgroundColor: 'var(--bg-card)',
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-lg)'
@@ -119,15 +120,15 @@ export const SignupPage = () => {
             width: '3.25rem',
             height: '3.25rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--accent-orange-subtle)',
-            border: '1px solid rgba(255, 107, 53, 0.4)',
+            backgroundColor: 'var(--accent-primary-soft)',
+            border: '1px solid rgba(139, 124, 255, 0.4)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '1rem',
-            boxShadow: '0 0 20px rgba(255, 107, 53, 0.2)'
+            boxShadow: '0 0 20px rgba(109, 91, 255, 0.2)'
           }}>
-            <ShieldAlert size={28} color="var(--accent-orange)" />
+            <ShieldAlert size={28} color="var(--accent-primary)" />
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#FFF', marginBottom: '0.35rem' }}>
             Join DisasterReady
@@ -318,11 +319,11 @@ export const SignupPage = () => {
           color: 'var(--text-secondary)'
         }}>
           Already registered?{' '}
-          <Link to="/login" style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>
+          <Link to="/login" style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
             Sign In here
           </Link>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 };

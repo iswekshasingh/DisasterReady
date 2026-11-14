@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { leaderboardApi } from '../utils/api';
+import { authApi, leaderboardApi } from '../utils/api';
+import { GlassCard } from '../components/GlassCard';
+import { GlassButton } from '../components/GlassButton';
 import {
   Trophy,
   Zap,
@@ -29,27 +31,25 @@ export const DashboardPage = () => {
     else setLoading(true);
 
     try {
-      // Query leaderboard to fetch the latest PostgreSQL totalPoints & level
-      const res = await leaderboardApi.getLeaderboard();
-      if (res.success && Array.isArray(res.leaderboard)) {
-        const currentUserId = user?.id || user?.userId;
-        const myEntry = res.leaderboard.find(
+      // Read this user's persisted score directly; the leaderboard only includes the top ten.
+      const [profileResult, leaderboardResult] = await Promise.allSettled([
+        authApi.getMe(),
+        leaderboardApi.getLeaderboard(),
+      ]);
+      const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
+      const leaderboard = leaderboardResult.status === 'fulfilled' ? leaderboardResult.value : null;
+      const currentUserId = user?.id || user?.userId;
+      const myEntry = Array.isArray(leaderboard?.leaderboard) ? leaderboard.leaderboard.find(
           (item) => item.id === currentUserId || item.username === user?.username
-        );
-
-        if (myEntry) {
-          setStats({
-            totalPoints: myEntry.totalPoints || 0,
-            level: myEntry.level || 1,
-            rank: myEntry.rank || null,
-          });
-        } else {
-          setStats({
-            totalPoints: 0,
-            level: 1,
-            rank: null,
-          });
-        }
+        ) : null;
+      if (profile?.success || leaderboard?.success) {
+        setStats({
+          totalPoints: profile?.user?.totalPoints ?? myEntry?.totalPoints ?? 0,
+          level: profile?.user?.level ?? myEntry?.level ?? 1,
+          rank: myEntry?.rank ?? null,
+        });
+      } else {
+        throw profileResult.reason || leaderboardResult.reason || new Error('Could not load trainee statistics.');
       }
     } catch (err) {
       console.warn('Could not load user leaderboard stats:', err);
@@ -79,10 +79,10 @@ export const DashboardPage = () => {
   const displayName = user?.fullName || user?.username || 'Trainee';
 
   return (
-    <div className="container" style={{ maxWidth: '720px', paddingTop: '2rem', paddingBottom: '3rem' }}>
-      <div className="card" style={{ padding: '2.5rem' }}>
+    <div className="container dashboard-page" style={{ maxWidth: '720px', paddingTop: '2rem', paddingBottom: '3rem' }}>
+      <GlassCard className="card dashboard-panel" style={{ padding: '2.5rem' }}>
         {/* Welcome Section */}
-        <div style={{
+        <div className="dashboard-welcome" style={{
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
@@ -102,7 +102,7 @@ export const DashboardPage = () => {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Logged in as <strong style={{ color: 'var(--accent-orange)' }}>@{user?.username}</strong> ({user?.email})
+              Logged in as <strong style={{ color: 'var(--accent-primary)' }}>@{user?.username}</strong> ({user?.email})
             </p>
           </div>
 
@@ -118,14 +118,14 @@ export const DashboardPage = () => {
         </div>
 
         {/* User Stats Grid */}
-        <div style={{
+        <div className="stats-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: '1.25rem',
           marginBottom: '2.5rem'
         }}>
           {/* Total Points */}
-          <div style={{
+          <div className="bento-stat" style={{
             padding: '1.5rem',
             borderRadius: 'var(--radius-md)',
             backgroundColor: 'var(--bg-input)',
@@ -136,8 +136,8 @@ export const DashboardPage = () => {
               width: '2.5rem',
               height: '2.5rem',
               borderRadius: '50%',
-              backgroundColor: 'var(--accent-orange-subtle)',
-              color: 'var(--accent-orange)',
+              backgroundColor: 'var(--accent-primary-soft)',
+              color: 'var(--accent-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -154,7 +154,7 @@ export const DashboardPage = () => {
           </div>
 
           {/* Current Level */}
-          <div style={{
+          <div className="bento-stat" style={{
             padding: '1.5rem',
             borderRadius: 'var(--radius-md)',
             backgroundColor: 'var(--bg-input)',
@@ -183,7 +183,7 @@ export const DashboardPage = () => {
           </div>
 
           {/* Leaderboard Standing */}
-          <div style={{
+          <div className="bento-stat" style={{
             padding: '1.5rem',
             borderRadius: 'var(--radius-md)',
             backgroundColor: 'var(--bg-input)',
@@ -213,11 +213,11 @@ export const DashboardPage = () => {
         </div>
 
         {/* Unity Simulation Callout */}
-        <div style={{
+        <div className="dashboard-hero" style={{
           padding: '1.5rem',
           borderRadius: 'var(--radius-md)',
-          background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.15) 0%, rgba(22, 32, 54, 0.9) 100%)',
-          border: '1px solid rgba(255, 107, 53, 0.35)',
+          background: 'linear-gradient(135deg, rgba(109, 91, 255, 0.17) 0%, rgba(22, 32, 54, 0.9) 100%)',
+          border: '1px solid rgba(109, 91, 255, 0.32)',
           marginBottom: '2rem',
           display: 'flex',
           flexWrap: 'wrap',
@@ -237,10 +237,10 @@ export const DashboardPage = () => {
             </p>
           </div>
 
-          <Link to="/play/earthquake" className="btn btn-primary btn-lg" style={{ boxShadow: '0 4px 20px rgba(255, 107, 53, 0.4)' }}>
+          <GlassButton as={Link} to="/play/earthquake" variant="primary" className="btn btn-primary btn-lg">
             <Gamepad2 size={18} />
             <span>Play Now</span>
-          </Link>
+          </GlassButton>
         </div>
 
         {/* Action Buttons */}
@@ -266,7 +266,7 @@ export const DashboardPage = () => {
             <span>Sign Out</span>
           </button>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 };

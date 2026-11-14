@@ -7,6 +7,9 @@ mergeInto(LibraryManager.library, {
     } catch (e) {
       window.dispatchEvent(new CustomEvent('unity:attemptSubmitted', { detail: jsonStr }));
     }
+  },
+  NotifyAuthExpiredToWeb: function () {
+    window.dispatchEvent(new Event('auth:expired'));
   }
 });
 

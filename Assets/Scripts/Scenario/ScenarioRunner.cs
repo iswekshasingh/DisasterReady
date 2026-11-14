@@ -19,8 +19,6 @@ namespace DisasterSurvival.Scenario
     public class ScenarioRunner : MonoBehaviour
     {
         private const string PrefsHighestUnlockedKey = "DISASTER_HIGHEST_UNLOCKED_SIM";
-        private const string EarthquakeBackendId = "60717a20-e54e-4b95-9253-c9b132a1374e";
-
         private int _currentSimIndex = 0;
         private SimulationDefinition _currentDefinition;
         private ISimulationEnvironment _currentEnvironment;
@@ -47,18 +45,23 @@ namespace DisasterSurvival.Scenario
 
         private void OnDestroy()
         {
+            StopCurrentSimulation();
+            GameLayoutManager.Unregister<ScenarioRunner>();
+        }
+
+        public void StopCurrentSimulation()
+        {
+            StopAllCoroutines();
             if (_currentEnvironment != null)
             {
                 _currentEnvironment.Teardown();
-
                 if (_currentEnvironment is MonoBehaviour mb && mb != null)
-                {
                     Destroy(mb.gameObject);
-                }
-
                 _currentEnvironment = null;
             }
-            GameLayoutManager.Unregister<ScenarioRunner>();
+
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null) audio.StopAllAudio();
         }
 
         public void StartOfflineSimulation(int index = -1)
@@ -73,7 +76,10 @@ namespace DisasterSurvival.Scenario
 
         public void StartSimulationByIndex(int index)
         {
-            StopAllCoroutines();
+            // A new run can be selected directly from results or the simulation menu.
+            // Tear down the previous environment first so its delayed callbacks cannot
+            // restart its music after the next scenario has begun.
+            StopCurrentSimulation();
             _currentSimIndex = index;
             _currentDefinition = SimulationRegistry.GetSimulation(_currentSimIndex);
 
@@ -83,11 +89,8 @@ namespace DisasterSurvival.Scenario
                 return;
             }
 
-            _activeScenarioBackendId = _currentSimIndex == 0 ? EarthquakeBackendId : "";
-            if (string.IsNullOrEmpty(_activeScenarioBackendId))
-            {
-                _isOfflineFallbackMode = true;
-            }
+            _activeScenarioBackendId = "";
+            _isOfflineFallbackMode = true;
 
             // Track highest unlocked simulation progression in PlayerPrefs
             // TODO: Replace with backend user progress sync when user profile endpoint is connected
@@ -98,6 +101,36 @@ namespace DisasterSurvival.Scenario
                 PlayerPrefs.Save();
             }
 
+            if (GameLayoutManager.useBackend)
+            {
+                ApiClient api = GameLayoutManager.Get<ApiClient>();
+                if (api != null)
+                {
+                    string disasterType = _currentDefinition.SimulationKey.ToUpperInvariant();
+                    api.GetScenarios(
+                        scenarios =>
+                        {
+                            ScenarioItem matchingScenario = scenarios != null
+                                ? scenarios.Find(item => string.Equals(item.disasterType, disasterType, StringComparison.OrdinalIgnoreCase))
+                                : null;
+
+                            _activeScenarioBackendId = matchingScenario != null ? matchingScenario.GetId() : "";
+                            _isOfflineFallbackMode = string.IsNullOrEmpty(_activeScenarioBackendId);
+                            if (_isOfflineFallbackMode)
+                                Debug.LogWarning($"[ScenarioRunner] No published {disasterType} scenario was found; this run will be offline and will not earn points.");
+
+                            StartCoroutine(RunSimulationFlow());
+                        },
+                        error =>
+                        {
+                            Debug.LogWarning($"[ScenarioRunner] Could not resolve the published {disasterType} scenario: {error}. Running offline.");
+                            StartCoroutine(RunSimulationFlow());
+                        }
+                    );
+                    return;
+                }
+            }
+
             StartCoroutine(RunSimulationFlow());
         }
 
@@ -105,17 +138,6 @@ namespace DisasterSurvival.Scenario
         {
             int nextIndex = SimulationRegistry.GetNextIndex(_currentSimIndex);
             Debug.Log($"[ScenarioRunner] Advancing from simulation {_currentSimIndex + 1} to {nextIndex + 1} ({SimulationRegistry.GetSimulation(nextIndex).DisplayTitle})...");
-
-            // In backend mode, check if we need to fall back to offline if the backend lacks this simulation
-            if (GameLayoutManager.useBackend && nextIndex > 0)
-            {
-                _isOfflineFallbackMode = true;
-                Debug.Log("[ScenarioRunner] Backend currently only provides earthquake scenario. Running next simulation in Offline Test Mode (attempt submission disabled).");
-            }
-            else
-            {
-                _isOfflineFallbackMode = false;
-            }
 
             StartSimulationByIndex(nextIndex);
         }

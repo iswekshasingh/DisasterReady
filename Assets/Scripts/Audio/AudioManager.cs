@@ -26,8 +26,13 @@ namespace DisasterSurvival.Audio
 
         private void OnDestroy()
         {
-            StopAllSounds();
+            StopAllAudio();
             GameLayoutManager.Unregister<AudioManager>();
+        }
+
+        private void OnApplicationQuit()
+        {
+            StopAllAudio();
         }
 
         private AudioClip GetOrLoadClip(string resourcePath)
@@ -46,6 +51,7 @@ namespace DisasterSurvival.Audio
 
         public void PlaySound(string resourcePath)
         {
+            AudioListener.pause = false;
             AudioClip clip = GetOrLoadClip(resourcePath);
             if (clip == null) return;
 
@@ -79,8 +85,15 @@ namespace DisasterSurvival.Audio
             foreach (string path in paths) StopSound(path);
         }
 
+        public void StopAllAudio()
+        {
+            StopLoop();
+            StopAllSounds();
+        }
+
         public void PlayLoop(string resourcePath, float volume = 0.75f)
         {
+            AudioListener.pause = false;
             AudioClip clip = GetOrLoadClip(resourcePath);
             if (clip != null && _loopSource != null)
             {
@@ -96,7 +109,7 @@ namespace DisasterSurvival.Audio
 
         public void StopLoop()
         {
-            if (_loopSource != null && _loopSource.isPlaying)
+            if (_loopSource != null)
             {
                 _loopSource.Stop();
                 _loopSource.clip = null;

@@ -30,7 +30,8 @@ namespace DisasterSurvival.Backend
             string endpoint,
             string method,
             string jsonBody = null,
-            int timeoutSeconds = 15)
+            int timeoutSeconds = 15,
+            bool includeAuth = true)
         {
             string url =
                 $"{GameLayoutManager.baseUrl.TrimEnd('/')}/{endpoint.TrimStart('/')}";
@@ -49,7 +50,7 @@ namespace DisasterSurvival.Backend
 
             AuthManager auth = GameLayoutManager.Get<AuthManager>();
 
-            if (auth != null && auth.IsAuthenticated)
+            if (includeAuth && auth != null && auth.IsAuthenticated)
             {
                 request.SetRequestHeader(
                     "Authorization",
@@ -84,7 +85,7 @@ namespace DisasterSurvival.Backend
                     $"[ApiClient] Response ({request.method} {request.url}) " +
                     $"[Status: {statusCode}]:\n{rawJson}");
 
-                if (statusCode == 401 || statusCode == 403)
+                if (statusCode == 401 && hasAuthToken)
                 {
                     AuthManager auth = GameLayoutManager.Get<AuthManager>();
 
@@ -96,6 +97,15 @@ namespace DisasterSurvival.Backend
                     onFailure?.Invoke(
                         "Session expired. Please sign in again.");
 
+                    yield break;
+                }
+
+                if (statusCode == 401 || statusCode == 403)
+                {
+                    string message = GetApiErrorMessage(rawJson);
+                    onFailure?.Invoke(string.IsNullOrEmpty(message)
+                        ? $"Request failed ({statusCode}). Please check your sign-in details."
+                        : message);
                     yield break;
                 }
 
@@ -129,6 +139,22 @@ namespace DisasterSurvival.Backend
             }
         }
 
+        private static string GetApiErrorMessage(string rawJson)
+        {
+            if (string.IsNullOrWhiteSpace(rawJson)) return null;
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<Dictionary<string, string>>(rawJson);
+                return payload != null && payload.TryGetValue("message", out string message)
+                    ? message
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         #endregion
 
         #region Authentication Endpoints
@@ -141,7 +167,7 @@ namespace DisasterSurvival.Backend
             string json = JsonConvert.SerializeObject(req);
 
             UnityWebRequest uwr =
-                CreateRequest("/api/auth/register", "POST", json);
+                CreateRequest("/api/auth/register", "POST", json, includeAuth: false);
 
             StartCoroutine(
                 SendRequest<AuthResponse>(
@@ -156,7 +182,7 @@ namespace DisasterSurvival.Backend
             string json = JsonConvert.SerializeObject(req);
 
             UnityWebRequest uwr =
-                CreateRequest("/api/auth/login", "POST", json);
+                CreateRequest("/api/auth/login", "POST", json, includeAuth: false);
 
             StartCoroutine(
                 SendRequest<AuthResponse>(

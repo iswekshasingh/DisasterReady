@@ -91,14 +91,14 @@ namespace DisasterSurvival.UI
             errRt.sizeDelta = new Vector2(650f, 40f);
 
             // Username Field
-           _usernameInput = CreateInputField(panel, "UsernameInput", GameLayoutManager.TextAuthUsernamePlaceholder, new Vector2(0f, 120f), false);
+            _usernameInput = CreateInputField(panel, "UsernameInput", GameLayoutManager.TextAuthUsernamePlaceholder, new Vector2(0f, 120f), false);
 
             // Email Field
             _emailInput = CreateInputField(panel, "EmailInput", "Enter your email", new Vector2(0f, 40f), false);
             _emailInput.gameObject.SetActive(false);
 
             // Password Field
-           _passwordInput = CreateInputField(panel, "PasswordInput", GameLayoutManager.TextAuthPasswordPlaceholder, new Vector2(0f, -40f), true);
+            _passwordInput = CreateInputField(panel, "PasswordInput", GameLayoutManager.TextAuthPasswordPlaceholder, new Vector2(0f, -40f), true);
 
             // Submit Button (Sign In / Register)
             _btnSubmit = UIHelper.CreateStyledButton(
@@ -111,7 +111,7 @@ namespace DisasterSurvival.UI
                 26,
                 OnSubmitClicked
             );
-            _btnSubmit.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -70f);
+            _btnSubmit.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -120f);
             _btnSubmitText = _btnSubmit.GetComponentInChildren<Text>();
 
             // Mode switch toggle button
@@ -125,7 +125,7 @@ namespace DisasterSurvival.UI
                 20,
                 ToggleMode
             );
-            btnSwitchMode.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -140f);
+            btnSwitchMode.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -190f);
             _btnSwitchModeText = btnSwitchMode.GetComponentInChildren<Text>();
 
             // Offline bypass button
@@ -139,7 +139,7 @@ namespace DisasterSurvival.UI
                 22,
                 () => _onPlayOffline?.Invoke()
             );
-            btnOffline.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -220f);
+            btnOffline.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -270f);
         }
 
         private InputField CreateInputField(GameObject parent, string name, string placeholderText, Vector2 anchoredPos, bool isPassword)
@@ -301,7 +301,7 @@ namespace DisasterSurvival.UI
         private void OnAuthFailed(string error)
         {
             _btnSubmit.interactable = true;
-            _errorText.text = $"Auth error: {error}";
+            _errorText.text = string.IsNullOrWhiteSpace(error) ? "Unable to sign in. Please try again." : error;
         }
     }
 }

@@ -18,6 +18,7 @@ namespace DisasterSurvival.Backend
         private string _currentUsername = "";
 
         public bool IsAuthenticated => !string.IsNullOrEmpty(_jwtToken);
+        public bool HasWebSession { get; private set; }
         public string Token => _jwtToken;
         public string CurrentUsername => _currentUsername;
 
@@ -52,6 +53,7 @@ namespace DisasterSurvival.Backend
         {
             _jwtToken = "";
             _currentUsername = "";
+            HasWebSession = false;
             PlayerPrefs.DeleteKey(PrefKeyJwt);
             PlayerPrefs.DeleteKey(PrefKeyUsername);
             PlayerPrefs.Save();
@@ -84,13 +86,13 @@ namespace DisasterSurvival.Backend
                     }
 
                     SaveSession(data.token, data.username);
+                    HasWebSession = true;
                     Debug.Log($"[AuthManager] Web session received for user: {data.username}");
 
                     GameManager gm = GameLayoutManager.Get<GameManager>();
                     if (gm != null)
                     {
-                        // In web mode, jump straight into the StarterScreen
-                        gm.TransitionToState(GameState.StarterScreen);
+                        gm.OnWebSessionReceived();
                     }
                 }
             }

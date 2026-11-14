@@ -74,17 +74,23 @@ export const register = async (req, res) => {
 // Login an existing user
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, username, password } = req.body;
+        const identifier = (email || username || '').trim();
 
-        if (!email || !password) {
+        if (!identifier || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Email and password are required'
+                message: 'Username or email and password are required'
             });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { email }
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: identifier.toLowerCase() },
+                    { username: identifier }
+                ]
+            }
         });
 
         if (!user) {
@@ -109,7 +115,7 @@ export const login = async (req, res) => {
         const token = jwt.sign(
             { userId: user.id, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '1d' }
+            { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
         );
 
         return res.status(200).json({

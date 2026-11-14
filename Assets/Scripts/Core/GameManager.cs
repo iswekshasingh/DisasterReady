@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using DisasterSurvival.Audio;
 using DisasterSurvival.Backend;
 using DisasterSurvival.Scenario;
 using DisasterSurvival.UI;
@@ -26,6 +27,11 @@ namespace DisasterSurvival.Core
         private GameState _currentState = GameState.Login;
         public GameState CurrentState => _currentState;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void NotifyAuthExpiredToWeb();
+#endif
+
         private void Awake()
         {
             GameLayoutManager.Register(this);
@@ -39,7 +45,27 @@ namespace DisasterSurvival.Core
                 api.OnUnauthorized += HandleUnauthorized;
             }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (GameLayoutManager.useBackend)
+            {
+                // Never block the game behind session injection. The web page sends the
+                // token as soon as Unity is ready; the account is attached asynchronously.
+                AuthManager auth = GameLayoutManager.Get<AuthManager>();
+                if (auth != null && auth.HasWebSession)
+                    OnWebSessionReceived();
+                else
+                    TransitionToState(GameState.StarterScreen);
+                return;
+            }
+#endif
             InitializeGameFlow();
+        }
+
+        public void OnWebSessionReceived()
+        {
+            LoadingSpinnerUI spinner = GameLayoutManager.Get<LoadingSpinnerUI>();
+            if (spinner != null) spinner.Hide();
+            TransitionToState(GameState.StarterScreen);
         }
 
         private void OnDestroy()
@@ -139,10 +165,20 @@ namespace DisasterSurvival.Core
             ScenarioRunner runner = GameLayoutManager.Get<ScenarioRunner>();
             if (runner != null)
             {
-                runner.StopAllCoroutines();
+                runner.StopCurrentSimulation();
             }
 
             TransitionToState(GameState.StarterScreen);
+        }
+
+        // Called synchronously by the host page before Unity quits on route changes.
+        public void StopAudioForPageExit()
+        {
+            ScenarioRunner runner = GameLayoutManager.Get<ScenarioRunner>();
+            if (runner != null) runner.StopCurrentSimulation();
+            AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            if (audio != null) audio.StopAllAudio();
+            AudioListener.pause = true;
         }
 
         private void FetchAndStartBackendScenario()
@@ -223,7 +259,18 @@ namespace DisasterSurvival.Core
 
         private void HandleUnauthorized()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            try
+            {
+                NotifyAuthExpiredToWeb();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[GameManager] Could not notify the portal about an expired session: {ex.Message}");
+            }
+#else
             TransitionToState(GameState.Login);
+#endif
         }
     }
 }

@@ -24,6 +24,7 @@ export const PlayGamePage = () => {
   const unityInstanceRef = useRef(null);
   const scriptRef = useRef(null);
   const sessionSentRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const [phase, setPhase] = useState('loading'); // 'loading' | 'ready' | 'error'
   const [progress, setProgress] = useState(0);
@@ -34,7 +35,7 @@ export const PlayGamePage = () => {
   // ─── Send session to Unity once instance is ready ─────────────────────────
   const injectSession = useCallback((instance) => {
     if (!token || !user || sessionSentRef.current) return;
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin;
     const payload = JSON.stringify({
       token,
       username: user.username,
@@ -64,6 +65,7 @@ export const PlayGamePage = () => {
     scriptRef.current = script;
 
     script.onload = () => {
+      if (!isMountedRef.current) return;
       if (typeof window.createUnityInstance !== 'function') {
         setErrorMsg('Unity loader script loaded but createUnityInstance is missing.');
         setPhase('error');
@@ -85,6 +87,11 @@ export const PlayGamePage = () => {
           setProgress(Math.round(prog * 100));
         })
         .then((instance) => {
+          if (!isMountedRef.current) {
+            try { instance.SendMessage('[Managers]', 'StopAudioForPageExit'); } catch (_) {}
+            instance.Quit().catch(() => {});
+            return;
+          }
           unityInstanceRef.current = instance;
           setPhase('ready');
           injectSession(instance);
@@ -101,6 +108,7 @@ export const PlayGamePage = () => {
     };
 
     script.onerror = () => {
+      if (!isMountedRef.current) return;
       setErrorMsg(
         `Could not fetch "${UNITY_LOADER_URL}". ` +
         'Make sure the Unity WebGL build files are present in frontend/public/unity/earthquake/Build/.'
@@ -113,6 +121,7 @@ export const PlayGamePage = () => {
 
   // ─── Mount / unmount ───────────────────────────────────────────────────────
   useEffect(() => {
+    isMountedRef.current = true;
     loadUnity();
 
     // Listen for Unity → React attempt-submitted event (from DisasterReadyBridge.jslib)
@@ -134,11 +143,15 @@ export const PlayGamePage = () => {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
+      isMountedRef.current = false;
       window.removeEventListener('unity:attemptSubmitted', handleAttemptSubmitted);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
 
       // Gracefully quit Unity instance on unmount
       if (unityInstanceRef.current) {
+        try {
+          unityInstanceRef.current.SendMessage('[Managers]', 'StopAudioForPageExit');
+        } catch (_) {}
         try {
           unityInstanceRef.current.Quit().catch(() => {});
         } catch (_) {}
@@ -174,13 +187,14 @@ export const PlayGamePage = () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="container simulation-page" style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
       {/* ── Top bar ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Link
             to="/dashboard"
+            className="simulation-action"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.45rem 0.9rem', borderRadius: 'var(--radius-md)',
@@ -188,14 +202,14 @@ export const PlayGamePage = () => {
               textDecoration: 'none', fontSize: '0.85rem', fontWeight: 500,
               backgroundColor: 'rgba(255,255,255,0.03)', transition: 'all 0.15s ease',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-orange)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = '#fff'; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
           >
             <ArrowLeft size={15} /> Dashboard
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Gamepad2 size={18} color="var(--accent-orange)" />
-            <h1 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+            <Gamepad2 size={18} color="var(--accent-primary)" />
+            <h1 className="simulation-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
               Earthquake Survival Simulation
             </h1>
           </div>
@@ -205,6 +219,7 @@ export const PlayGamePage = () => {
           {phase === 'ready' && (
             <button
               onClick={toggleFullscreen}
+              className="simulation-action"
               title="Toggle Fullscreen"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
@@ -219,12 +234,13 @@ export const PlayGamePage = () => {
           )}
           <Link
             to="/leaderboard"
+            className="simulation-action"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.45rem 0.9rem', borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--accent-orange)', color: 'var(--accent-orange)',
+              border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)',
               textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
-              background: 'var(--accent-orange-subtle)',
+              background: 'var(--accent-primary-soft)',
             }}
           >
             <Trophy size={14} /> Leaderboard
@@ -265,10 +281,11 @@ export const PlayGamePage = () => {
           </div>
           <button
             onClick={retry}
+            className="simulation-action"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
               padding: '0.6rem 1.4rem', borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--accent-orange)', color: '#fff',
+              backgroundColor: 'var(--accent-primary)', color: '#fff',
               border: 'none', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
             }}
           >
@@ -314,9 +331,9 @@ export const PlayGamePage = () => {
               {/* Icon */}
               <div style={{
                 width: '3.5rem', height: '3.5rem', borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--accent-orange-subtle)',
+                backgroundColor: 'var(--accent-primary-soft)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--accent-orange)',
+                color: 'var(--accent-primary)',
               }}>
                 <Gamepad2 size={28} />
               </div>
@@ -334,7 +351,7 @@ export const PlayGamePage = () => {
               <div style={{ width: '260px', height: '7px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                 <div style={{
                   width: `${progress}%`, height: '100%',
-                  backgroundColor: 'var(--accent-orange)',
+                  backgroundColor: 'var(--accent-primary)',
                   transition: 'width 0.25s ease-out',
                   borderRadius: 'var(--radius-full)',
                 }} />
@@ -349,7 +366,7 @@ export const PlayGamePage = () => {
 
       {/* ── Controls footer ── */}
       {phase !== 'error' && (
-        <div style={{
+        <div className="simulation-controls" style={{
           padding: '0.9rem 1.1rem', borderRadius: 'var(--radius-md)',
           backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)',
           display: 'flex', flexWrap: 'wrap', alignItems: 'center',
@@ -357,7 +374,7 @@ export const PlayGamePage = () => {
           fontSize: '0.84rem', color: 'var(--text-secondary)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <HelpCircle size={15} color="var(--accent-orange)" />
+            <HelpCircle size={15} color="var(--accent-primary)" />
             <span>
               <strong>Controls:</strong> Click or Arrow Keys to make decisions. React quickly — time matters!
             </span>

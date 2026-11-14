@@ -15,7 +15,7 @@ import { PlayGamePage } from './pages/PlayGamePage';
 // Simple 404 view
 const NotFoundPage = () => (
   <div className="container" style={{ textAlign: 'center', padding: '6rem 1rem' }}>
-    <h1 style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--accent-orange)', marginBottom: '0.5rem' }}>
+    <h1 style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>
       404
     </h1>
     <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#FFF', marginBottom: '1.5rem' }}>

@@ -1,4 +1,5 @@
 @import './theme.css';
+@import './futuristic.css';
 
 *, *::before, *::after {
   box-sizing: border-box;

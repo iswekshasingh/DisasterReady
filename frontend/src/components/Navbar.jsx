@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GlassButton } from './GlassButton';
 import {
   ShieldAlert,
   LayoutDashboard,
@@ -24,19 +25,6 @@ export const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  const navLinkStyle = ({ isActive }) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.45rem',
-    padding: '0.5rem 0.85rem',
-    borderRadius: 'var(--radius-md)',
-    fontSize: '0.9rem',
-    fontWeight: 600,
-    color: isActive ? 'var(--accent-orange)' : 'var(--text-secondary)',
-    backgroundColor: isActive ? 'var(--accent-orange-subtle)' : 'transparent',
-    transition: 'all var(--transition-fast)'
-  });
-
   return (
     <header style={{
       position: 'sticky',
@@ -45,7 +33,7 @@ export const Navbar = () => {
       backdropFilter: 'blur(16px)',
       backgroundColor: 'rgba(10, 15, 29, 0.85)',
       borderBottom: '1px solid var(--border-subtle)'
-    }}>
+    }} className="navbar-shell">
       <div className="container" style={{
         height: '4.25rem',
         display: 'flex',
@@ -53,22 +41,22 @@ export const Navbar = () => {
         justifyContent: 'space-between'
       }}>
         {/* Brand Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <Link to="/" className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
             width: '2.4rem',
             height: '2.4rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--accent-orange-subtle)',
-            border: '1px solid rgba(255, 107, 53, 0.4)',
+            backgroundColor: 'var(--accent-primary-soft)',
+            border: '1px solid rgba(139, 124, 255, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(255, 107, 53, 0.25)'
-          }}>
-            <ShieldAlert size={22} color="var(--accent-orange)" />
+            boxShadow: '0 0 15px rgba(109, 91, 255, 0.22)'
+          }} className="navbar-logo">
+            <ShieldAlert size={22} color="var(--accent-primary)" />
           </div>
-          <span style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
-            Disaster<span style={{ color: 'var(--accent-orange)' }}>Ready</span>
+          <span className="brand-word" style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+            Disaster<span className="brand-accent" style={{ color: 'var(--accent-primary)' }}>Ready</span>
           </span>
         </Link>
 
@@ -76,21 +64,21 @@ export const Navbar = () => {
         <nav style={{ display: 'none', alignItems: 'center', gap: '0.5rem' }} className="desktop-nav">
           {isAuthenticated ? (
             <>
-              <NavLink to="/dashboard" style={navLinkStyle}>
+              <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <LayoutDashboard size={17} />
                 Dashboard
               </NavLink>
-              <NavLink to="/play/earthquake" style={navLinkStyle}>
+              <NavLink to="/play/earthquake" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <Gamepad2 size={17} />
                 Play Simulation
               </NavLink>
-              <NavLink to="/leaderboard" style={navLinkStyle}>
+              <NavLink to="/leaderboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <Trophy size={17} />
                 Leaderboard
               </NavLink>
             </>
           ) : (
-            <NavLink to="/leaderboard" style={navLinkStyle}>
+            <NavLink to="/leaderboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
               <Trophy size={17} />
               Leaderboard
             </NavLink>
@@ -101,7 +89,7 @@ export const Navbar = () => {
         <div style={{ display: 'none', alignItems: 'center', gap: '0.75rem' }} className="desktop-actions">
           {isAuthenticated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Link to="/dashboard" style={{
+              <Link to="/dashboard" className="navbar-user" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
@@ -114,7 +102,7 @@ export const Navbar = () => {
                   width: '1.6rem',
                   height: '1.6rem',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--accent-orange)',
+                  backgroundColor: 'var(--accent-primary)',
                   color: '#FFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -140,14 +128,14 @@ export const Navbar = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Link to="/login" className="btn btn-secondary btn-sm">
+              <GlassButton as={Link} to="/login" variant="secondary" className="btn btn-secondary btn-sm">
                 <LogIn size={15} />
                 <span>Sign In</span>
-              </Link>
-              <Link to="/signup" className="btn btn-primary btn-sm">
+              </GlassButton>
+              <GlassButton as={Link} to="/signup" variant="primary" className="btn btn-primary btn-sm">
                 <UserPlus size={15} />
                 <span>Sign Up</span>
-              </Link>
+              </GlassButton>
             </div>
           )}
         </div>
@@ -170,7 +158,7 @@ export const Navbar = () => {
 
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
-        <div style={{
+        <div className="mobile-menu" style={{
           padding: '1.25rem 1.5rem',
           backgroundColor: 'var(--bg-secondary)',
           borderBottom: '1px solid var(--border-subtle)',
@@ -192,7 +180,7 @@ export const Navbar = () => {
                   width: '2rem',
                   height: '2rem',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--accent-orange)',
+                  backgroundColor: 'var(--accent-primary)',
                   color: '#FFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -207,13 +195,13 @@ export const Navbar = () => {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user?.email}</div>
                 </div>
               </div>
-              <NavLink to="/dashboard" onClick={() => setMobileMenuOpen(false)} style={navLinkStyle}>
+              <NavLink to="/dashboard" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <LayoutDashboard size={18} /> Dashboard
               </NavLink>
-              <NavLink to="/play/earthquake" onClick={() => setMobileMenuOpen(false)} style={navLinkStyle}>
+              <NavLink to="/play/earthquake" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <Gamepad2 size={18} /> Play Simulation
               </NavLink>
-              <NavLink to="/leaderboard" onClick={() => setMobileMenuOpen(false)} style={navLinkStyle}>
+              <NavLink to="/leaderboard" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <Trophy size={18} /> Leaderboard
               </NavLink>
               <button
@@ -226,7 +214,7 @@ export const Navbar = () => {
             </>
           ) : (
             <>
-              <NavLink to="/leaderboard" onClick={() => setMobileMenuOpen(false)} style={navLinkStyle}>
+              <NavLink to="/leaderboard" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 <Trophy size={18} /> Leaderboard
               </NavLink>
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -243,7 +231,7 @@ export const Navbar = () => {
       )}
 
       <style>{`
-        @media (min-width: 768px) {
+        @media (min-width: 980px) {
           .desktop-nav { display: flex !important; }
           .desktop-actions { display: flex !important; }
           .mobile-toggle { display: none !important; }

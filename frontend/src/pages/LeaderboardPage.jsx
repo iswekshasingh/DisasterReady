@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { leaderboardApi } from '../utils/api';
 import { Trophy, RefreshCw, AlertTriangle, Crown, Medal, Award, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { GlassCard } from '../components/GlassCard';
 
 export const LeaderboardPage = () => {
   const { user } = useAuth();
@@ -40,7 +41,7 @@ export const LeaderboardPage = () => {
   const currentUserId = user?.id || user?.userId;
 
   return (
-    <div className="container" style={{ maxWidth: '840px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="container leaderboard-page" style={{ maxWidth: '840px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Top Header */}
       <div style={{
         display: 'flex',
@@ -104,7 +105,7 @@ export const LeaderboardPage = () => {
       )}
 
       {/* Leaderboard Table Card */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <GlassCard className="card leaderboard-panel" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
             <div className="spinner" style={{ width: '2.5rem', height: '2.5rem', margin: '0 auto 1rem auto' }}></div>
@@ -151,7 +152,7 @@ export const LeaderboardPage = () => {
                             width: '2rem',
                             height: '2rem',
                             borderRadius: '50%',
-                            backgroundColor: isMe ? 'var(--accent-orange)' : 'rgba(255, 255, 255, 0.08)',
+                            backgroundColor: isMe ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.08)',
                             color: '#FFF',
                             display: 'flex',
                             alignItems: 'center',
@@ -164,7 +165,7 @@ export const LeaderboardPage = () => {
                           <div>
                             <div style={{
                               fontWeight: 700,
-                              color: isMe ? 'var(--accent-orange)' : '#FFF',
+                              color: isMe ? 'var(--accent-primary)' : '#FFF',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.45rem'
@@ -201,7 +202,7 @@ export const LeaderboardPage = () => {
             </table>
           </div>
         )}
-      </div>
+      </GlassCard>
     </div>
   );
 };

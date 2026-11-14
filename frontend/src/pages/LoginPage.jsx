@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GlassCard } from '../components/GlassCard';
 import {
   ShieldAlert,
   Mail,
@@ -52,12 +53,12 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="container" style={{
+    <div className="container auth-page" style={{
       maxWidth: '460px',
       paddingTop: '2.5rem',
       paddingBottom: '3.5rem'
     }}>
-      <div className="card" style={{
+      <GlassCard className="card auth-card" style={{
         backgroundColor: 'var(--bg-card)',
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-lg)'
@@ -68,15 +69,15 @@ export const LoginPage = () => {
             width: '3.25rem',
             height: '3.25rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--accent-orange-subtle)',
-            border: '1px solid rgba(255, 107, 53, 0.4)',
+            backgroundColor: 'var(--accent-primary-soft)',
+            border: '1px solid rgba(139, 124, 255, 0.4)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '1rem',
-            boxShadow: '0 0 20px rgba(255, 107, 53, 0.2)'
+            boxShadow: '0 0 20px rgba(109, 91, 255, 0.2)'
           }}>
-            <ShieldAlert size={28} color="var(--accent-orange)" />
+            <ShieldAlert size={28} color="var(--accent-primary)" />
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#FFF', marginBottom: '0.35rem' }}>
             Trainee Sign In
@@ -210,7 +211,7 @@ export const LoginPage = () => {
           fontSize: '0.8rem',
           color: 'var(--text-muted)'
         }}>
-          <Gamepad2 size={18} color="var(--accent-orange)" style={{ flexShrink: 0 }} />
+          <Gamepad2 size={18} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
           <span>Already registered inside the Unity game? You can log in here with the same email and password.</span>
         </div>
 
@@ -224,11 +225,11 @@ export const LoginPage = () => {
           color: 'var(--text-secondary)'
         }}>
           Don't have an account yet?{' '}
-          <Link to="/signup" style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>
+          <Link to="/signup" style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
             Create one now
           </Link>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 };

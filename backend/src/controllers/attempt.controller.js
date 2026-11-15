@@ -84,12 +84,16 @@ export const submitAttempt = async (req, res) => {
                 correctAnswers++;
             }
 
+            const pointsEarned = isCorrect ? question.points : 0;
+
             return {
                 questionId: question.questionId,
                 selectedOptionId: submittedAnswer.selectedOptionId,
                 correctOptionId: question.correctOptionId,
                 isCorrect,
-                points: isCorrect ? question.points : 0,
+                correct: isCorrect,
+                points: pointsEarned,
+                pointsEarned,
                 explanation: question.explanation
             };
         });
@@ -129,6 +133,9 @@ export const submitAttempt = async (req, res) => {
                 correctAnswers,
                 totalQuestions: questions.length,
                 passed: score >= scenario.passingScore,
+                feedback: score >= scenario.passingScore
+                    ? 'Excellent response! You demonstrated strong disaster preparedness decision-making.'
+                    : 'Review the safety guidance and try again to improve your survival score.',
                 results
             }
         });

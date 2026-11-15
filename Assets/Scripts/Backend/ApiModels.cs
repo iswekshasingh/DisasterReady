@@ -293,11 +293,25 @@ namespace DisasterSurvival.Backend
         [JsonProperty("correctOptionId")]
         public string correctOptionId;
 
+        [JsonProperty("isCorrect")]
+        public bool isCorrect;
+
         [JsonProperty("correct")]
-        public bool correct;
+        public bool correct
+        {
+            get => isCorrect;
+            set => isCorrect = value;
+        }
+
+        [JsonProperty("points")]
+        public int points;
 
         [JsonProperty("pointsEarned")]
-        public int pointsEarned;
+        public int pointsEarned
+        {
+            get => points;
+            set => points = value;
+        }
 
         [JsonProperty("explanation")]
         public string explanation;

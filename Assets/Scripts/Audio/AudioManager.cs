@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DisasterSurvival.Core;
@@ -65,6 +66,22 @@ namespace DisasterSurvival.Audio
             source.clip = clip;
             _activeSfxSources[resourcePath] = source;
             source.Play();
+
+            // Automatically clean up the transient AudioSource component once the clip finishes playing
+            StartCoroutine(CleanupSoundAfterPlayback(resourcePath, source, clip.length));
+        }
+
+        private IEnumerator CleanupSoundAfterPlayback(string resourcePath, AudioSource source, float duration)
+        {
+            yield return new WaitForSeconds(Mathf.Max(0.1f, duration) + 0.1f);
+            if (source != null)
+            {
+                if (_activeSfxSources.TryGetValue(resourcePath, out AudioSource current) && current == source)
+                {
+                    _activeSfxSources.Remove(resourcePath);
+                }
+                Destroy(source);
+            }
         }
 
         public void StopSound(string resourcePath)

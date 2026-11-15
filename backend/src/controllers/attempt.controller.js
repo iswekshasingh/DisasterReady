@@ -98,8 +98,8 @@ export const submitAttempt = async (req, res) => {
             };
         });
 
-        // Save attempt and update user's total points
-        const attempt = await prisma.$transaction(async (tx) => {
+        // Save attempt and update user's total points and level progression
+        const { savedAttempt, updatedUser } = await prisma.$transaction(async (tx) => {
             const savedAttempt = await tx.attempt.create({
                 data: {
                     userId,
@@ -112,21 +112,36 @@ export const submitAttempt = async (req, res) => {
                 }
             });
 
-            await tx.user.update({
+            // Calculate updated level (1 level per 100 points, minimum level 1)
+            const currentUser = await tx.user.findUnique({
+                where: { id: userId },
+                select: { totalPoints: true }
+            });
+
+            const newTotalPoints = (currentUser?.totalPoints || 0) + score;
+            const newLevel = Math.max(1, Math.floor(newTotalPoints / 100) + 1);
+
+            const updatedUser = await tx.user.update({
                 where: { id: userId },
                 data: {
-                    totalPoints: { increment: score }
+                    totalPoints: { increment: score },
+                    level: newLevel
+                },
+                select: {
+                    id: true,
+                    totalPoints: true,
+                    level: true
                 }
             });
 
-            return savedAttempt;
+            return { savedAttempt, updatedUser };
         });
 
         return res.status(201).json({
             success: true,
             message: 'Attempt submitted successfully',
             attempt: {
-                id: attempt.id,
+                id: savedAttempt.id,
                 scenarioId,
                 score,
                 maxScore: scenario.maxScore,
@@ -137,6 +152,10 @@ export const submitAttempt = async (req, res) => {
                     ? 'Excellent response! You demonstrated strong disaster preparedness decision-making.'
                     : 'Review the safety guidance and try again to improve your survival score.',
                 results
+            },
+            user: {
+                totalPoints: updatedUser.totalPoints,
+                level: updatedUser.level
             }
         });
 

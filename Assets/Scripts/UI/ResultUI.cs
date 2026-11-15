@@ -30,6 +30,9 @@ namespace DisasterSurvival.UI
         private GameObject _learningRows;
         private GameObject _leaderboardPanel;
         private Text _leaderboardListText;
+        private Button _btnReplay;
+        private Button _btnContinue;
+        private Button _btnSelect;
         private Button _btnRetry;
         private Action _onReplayClicked;
         private Action _onNextSimClicked;
@@ -109,26 +112,29 @@ namespace DisasterSurvival.UI
             learningRt.anchoredPosition = new Vector2(390, -74);
             learningRt.sizeDelta = Vector2.zero;
 
-            Button replay = AddButton(card, "Replay", "REPLAY", new Vector2(-510, -390), new Vector2(360, 78), new Color(0.24f, 0.43f, 0.76f), () =>
+            _btnReplay = AddButton(card, "Replay", "REPLAY", new Vector2(-510, -390), new Vector2(360, 78), new Color(0.24f, 0.43f, 0.76f), () =>
             {
                 PlayClickSound(); gameObject.SetActive(false); _onReplayClicked?.Invoke();
             });
-            Button middle = AddButton(card, "Continue", "BACK TO START", new Vector2(0, -390), new Vector2(410, 78), Green, () =>
+            _btnContinue = AddButton(card, "Continue", "BACK TO START", new Vector2(0, -390), new Vector2(410, 78), Green, () =>
             {
                 PlayClickSound(); gameObject.SetActive(false);
                 if (_onNextSimClicked != null) _onNextSimClicked.Invoke();
                 else ReturnToStarter();
             });
-            _continueLabel = middle.GetComponentInChildren<Text>();
-            Button select = AddButton(card, "SelectSimulation", "SELECT SIM.", new Vector2(510, -390), new Vector2(360, 78), new Color(0.58f, 0.35f, 0.23f), () =>
+            _continueLabel = _btnContinue.GetComponentInChildren<Text>();
+            _btnSelect = AddButton(card, "SelectSimulation", "SELECT SIM.", new Vector2(510, -390), new Vector2(360, 78), new Color(0.58f, 0.35f, 0.23f), () =>
             {
                 PlayClickSound(); gameObject.SetActive(false); ReturnToStarter();
             });
-            replay.gameObject.name = "BtnReplay";
-            middle.gameObject.name = "BtnContinue";
-            select.gameObject.name = "BtnSelectSimulation";
+            _btnReplay.gameObject.name = "BtnReplay";
+            _btnContinue.gameObject.name = "BtnContinue";
+            _btnSelect.gameObject.name = "BtnSelectSimulation";
 
-            _btnRetry = AddButton(card, "Retry", GameLayoutManager.TextButtonRetry, new Vector2(0, -390), new Vector2(360, 78), new Color(0.78f, 0.25f, 0.2f), () => _onRetryClicked?.Invoke());
+            _btnRetry = AddButton(card, "Retry", GameLayoutManager.TextButtonRetry, new Vector2(0, -390), new Vector2(360, 78), new Color(0.78f, 0.25f, 0.2f), () =>
+            {
+                PlayClickSound(); _onRetryClicked?.Invoke();
+            });
             _btnRetry.gameObject.SetActive(false);
         }
 
@@ -223,7 +229,10 @@ namespace DisasterSurvival.UI
         {
             _dimBg.raycastTarget = true;
             _mainContent.SetActive(true);
-            _btnRetry.gameObject.SetActive(false);
+            if (_btnReplay != null) _btnReplay.gameObject.SetActive(true);
+            if (_btnContinue != null) _btnContinue.gameObject.SetActive(true);
+            if (_btnSelect != null) _btnSelect.gameObject.SetActive(true);
+            if (_btnRetry != null) _btnRetry.gameObject.SetActive(false);
             _leaderboardPanel.SetActive(false);
             _titleText.text = GameLayoutManager.TextResultTitle;
             _subtitleText.text = simDef != null ? simDef.DisplayTitle.ToUpperInvariant() : GameLayoutManager.TextResultSubtitleOffline;
@@ -307,14 +316,25 @@ namespace DisasterSurvival.UI
 
         public void ShowNetworkFailure(string error, Action onRetry)
         {
-            _mainContent.SetActive(false);
-            _btnRetry.gameObject.SetActive(true);
+            _dimBg.raycastTarget = true;
             _onRetryClicked = onRetry;
             _titleText.text = "SUBMISSION FAILED";
             _subtitleText.text = "Communication Error";
+            for (int i = 0; i < _stars.Length; i++)
+            {
+                _stars[i].color = Muted;
+                _stars[i].text = "★";
+            }
             _scoreText.text = "";
             _statusText.text = $"{GameLayoutManager.TextNetworkErrorPrompt}\n{error}";
+            ClearChildren(_checkpointRows.transform);
+            ClearChildren(_learningRows.transform);
             _mainContent.SetActive(true);
+            if (_btnReplay != null) _btnReplay.gameObject.SetActive(false);
+            if (_btnContinue != null) _btnContinue.gameObject.SetActive(false);
+            if (_btnSelect != null) _btnSelect.gameObject.SetActive(false);
+            if (_btnRetry != null) _btnRetry.gameObject.SetActive(true);
+            _leaderboardPanel.SetActive(false);
             gameObject.SetActive(true);
         }
 

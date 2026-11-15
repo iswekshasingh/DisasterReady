@@ -40,7 +40,7 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(email.trim(), password);
       // Redirect to the originally attempted page or dashboard
       const origin = location.state?.from?.pathname || '/dashboard';
       navigate(origin, { replace: true });
@@ -127,16 +127,16 @@ export const LoginPage = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          {/* Email */}
+          {/* Email or Username */}
           <div className="form-group">
-            <label className="form-label" htmlFor="email">Email Address</label>
+            <label className="form-label" htmlFor="email">Email or Username</label>
             <div className="form-input-wrapper">
               <Mail size={18} className="form-input-icon" />
               <input
                 id="email"
-                type="email"
+                type="text"
                 required
-                placeholder="trainee@example.com"
+                placeholder="trainee@example.com or username"
                 className="form-input has-icon"
                 value={email}
                 onChange={(e) => {

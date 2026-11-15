@@ -19,6 +19,9 @@ export const register = async (req, res) => {
             });
         }
 
+        const trimmedUsername = username.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+
         if (password.length < 8) {
             return res.status(400).json({
                 success: false,
@@ -28,7 +31,7 @@ export const register = async (req, res) => {
 
         const existingUser = await prisma.user.findFirst({
             where: {
-                OR: [{ email }, { username }]
+                OR: [{ email: normalizedEmail }, { username: trimmedUsername }]
             }
         });
 
@@ -43,10 +46,10 @@ export const register = async (req, res) => {
 
         const user = await prisma.user.create({
             data: {
-                username,
-                email,
+                username: trimmedUsername,
+                email: normalizedEmail,
                 passwordHash,
-                fullName
+                fullName: fullName ? fullName.trim() : null
             },
             select: {
                 id: true,
@@ -57,9 +60,16 @@ export const register = async (req, res) => {
             }
         });
 
+        const token = jwt.sign(
+            { userId: user.id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+        );
+
         return res.status(201).json({
             success: true,
             message: 'Registration successful',
+            token,
             user
         });
     } catch (error) {

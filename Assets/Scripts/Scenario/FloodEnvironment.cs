@@ -101,9 +101,21 @@ namespace DisasterSurvival.Scenario
         {
             CharacterController2D character = GameLayoutManager.Get<CharacterController2D>();
             AudioManager audio = GameLayoutManager.Get<AudioManager>();
+            BannerUI banner = GameLayoutManager.Get<BannerUI>();
 
             if (_beat == 0)
             {
+                if (optionId == "B")
+                {
+                    if (banner != null) banner.DisplayMessage(GameLayoutManager.FloodQ1Harm, BannerStyle.Harm, true);
+                    if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioFail);
+                }
+                else
+                {
+                    if (banner != null) banner.DisplayMessage(GameLayoutManager.FloodQ1Safe, BannerStyle.Safe, true);
+                    if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioSuccess);
+                }
+
                 // Go up the visible left staircase, then play the supplied rising-water animation.
                 if (character != null)
                 {
@@ -156,6 +168,17 @@ namespace DisasterSurvival.Scenario
             }
             else if (_beat == 1)
             {
+                if (optionId == "A")
+                {
+                    if (banner != null) banner.DisplayMessage(GameLayoutManager.FloodQ2Harm, BannerStyle.Harm, true);
+                    if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioFail);
+                }
+                else
+                {
+                    if (banner != null) banner.DisplayMessage(GameLayoutManager.FloodQ2Safe, BannerStyle.Safe, true);
+                    if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioSuccess);
+                }
+
                 if (character != null) character.transform.position = GameLayoutManager.FloodUpperRoomCharacter;
                 // The flooded sockets arc downstairs in either choice. Choosing to wade in
                 // additionally brings the character near the stairs and shows the shock pose.
@@ -193,21 +216,32 @@ namespace DisasterSurvival.Scenario
             }
             else
             {
-                if (optionId == "C" && character != null)
+                if (optionId == "C")
                 {
-                    if (audio != null) audio.PlaySound(GameLayoutManager.FloodPathAudioPhone);
-                    SetRescuePose(character, "calling_911", GameLayoutManager.FloodCallingPoseSize, "calling_911_pose");
-                    yield return new WaitForSeconds(GameLayoutManager.FloodCallPauseDuration);
-                    if (audio != null) audio.StopSound(GameLayoutManager.FloodPathAudioPhone);
-                    SetRescuePose(character, "calling_for_help", GameLayoutManager.FloodHelpPoseSize, "calling_for_help_pose");
-                    yield return StartCoroutine(BringInHelicopter());
-                    yield return new WaitForSeconds(GameLayoutManager.OutcomeDisplayDuration);
+                    if (banner != null) banner.DisplayMessage(GameLayoutManager.FloodQ3Safe, BannerStyle.Safe, true);
+                    if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioSuccess);
+                    if (character != null)
+                    {
+                        if (audio != null) audio.PlaySound(GameLayoutManager.FloodPathAudioPhone);
+                        SetRescuePose(character, "calling_911", GameLayoutManager.FloodCallingPoseSize, "calling_911_pose");
+                        yield return new WaitForSeconds(GameLayoutManager.FloodCallPauseDuration);
+                        if (audio != null) audio.StopSound(GameLayoutManager.FloodPathAudioPhone);
+                        SetRescuePose(character, "calling_for_help", GameLayoutManager.FloodHelpPoseSize, "calling_for_help_pose");
+                        yield return StartCoroutine(BringInHelicopter());
+                        yield return new WaitForSeconds(GameLayoutManager.OutcomeDisplayDuration);
+                    }
                 }
-                else if (character != null)
+                else
                 {
-                    character.SetState(CharacterState.Hurt);
-                    yield return new WaitForSeconds(GameLayoutManager.OutcomeDisplayDuration * .5f);
-                    character.SetState(CharacterState.Idle);
+                    string harmMsg = optionId == "A" ? GameLayoutManager.FloodQ3Drive : GameLayoutManager.FloodQ3Walk;
+                    if (banner != null) banner.DisplayMessage(harmMsg, BannerStyle.Harm, true);
+                    if (audio != null) audio.PlaySound(GameLayoutManager.PathAudioFail);
+                    if (character != null)
+                    {
+                        character.SetState(CharacterState.Hurt);
+                        yield return new WaitForSeconds(GameLayoutManager.OutcomeDisplayDuration * .5f);
+                        character.SetState(CharacterState.Idle);
+                    }
                 }
             }
 
